@@ -17,6 +17,9 @@ const pool = new Pool({
   user: process.env.PG_USER || "postgres",
   password: process.env.PG_PASSWORD,
   database: process.env.PG_DATABASE || "mynest",
+  // Hosted Postgres (Neon/Render) requires TLS; local Docker does not.
+  // On Render, set PG_SSL=true.
+  ssl: process.env.PG_SSL === "true" ? { rejectUnauthorized: false } : undefined,
 });
 
 pool.on("error", (err) => console.error("pg pool error:", err.message));
