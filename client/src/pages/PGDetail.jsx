@@ -35,10 +35,10 @@ export default function PGDetail() {
   const [showRentForm, setShowRentForm] = useState(false);
   const [rentMsg, setRentMsg] = useState("");
 
-  const isLoggedIn = !!localStorage.getItem("fairnest_token");
+  const isLoggedIn = !!localStorage.getItem("mynest_token");
   const me = (() => {
     try {
-      return JSON.parse(localStorage.getItem("fairnest_user") || "{}");
+      return JSON.parse(localStorage.getItem("mynest_user") || "{}");
     } catch {
       return {};
     }
@@ -121,8 +121,21 @@ export default function PGDetail() {
     }
   }
 
-  if (error && !data) return <div className="container py-4 text-danger">{error}</div>;
-  if (!data) return <div className="container py-4">Loading...</div>;
+  if (error && !data)
+    return (
+      <div className="container py-4">
+        <div className="fn-alert fn-alert-error" role="alert">{error}</div>
+      </div>
+    );
+  if (!data)
+    return (
+      <div className="container py-4">
+        <div className="fn-skeleton mb-3" style={{ height: 34, width: "42%" }} />
+        <div className="fn-skeleton mb-3" style={{ height: 340 }} />
+        <div className="fn-skeleton fn-skel-line" style={{ width: "85%" }} />
+        <div className="fn-skeleton fn-skel-line w-60" />
+      </div>
+    );
 
   const { pg, photos, requests } = data;
   const facilities = pg.facilities ? pg.facilities.split(", ") : [];
@@ -161,7 +174,7 @@ export default function PGDetail() {
                 alt={pg.name}
               />
             ) : (
-              <div className="rounded fn-hero-img bg-light d-flex align-items-center justify-content-center text-muted">
+              <div className="rounded fn-hero-img fn-pg-noimg-lg">
                 No photo yet
               </div>
             )}
@@ -172,7 +185,7 @@ export default function PGDetail() {
                 <img
                   key={p.id}
                   src={p.url}
-                  className={`fn-thumb ${i === mainImg ? "border-primary" : ""}`}
+                  className={`fn-thumb${i === mainImg ? " active" : ""}`}
                   alt={pg.name}
                   onClick={() => setMainImg(i)}
                 />
@@ -185,7 +198,7 @@ export default function PGDetail() {
             <div className="card p-4 h-100">
               <div className="row text-center g-3 mb-3">
                 <div className="col-4">
-                  <div className="fn-stat-num">Rs {pg.monthly_rent}</div>
+                  <div className="fn-stat-num">Rs {Number(pg.monthly_rent).toLocaleString("en-IN")}</div>
                   <div className="small text-muted">per month</div>
                 </div>
                 <div className="col-4">
@@ -199,7 +212,7 @@ export default function PGDetail() {
               </div>
 
               {/* Contact the owner directly */}
-              <div className="card p-3 bg-light">
+              <div className="card p-3 fn-contact-inner">
                 <h6 className="fw-semibold mb-1">Contact the owner</h6>
                 <p className="small text-muted mb-2">
                   Talk to {pg.owner_name} directly for visits, availability and rent details.
@@ -470,8 +483,8 @@ export default function PGDetail() {
         </div>
       </Reveal>
 
-      {notice && <p className="text-success mt-3">{notice}</p>}
-      {error && <p className="text-danger mt-3">{error}</p>}
+      {notice && <div className="fn-alert fn-alert-success" role="status">{notice}</div>}
+      {error && <div className="fn-alert fn-alert-error" role="alert">{error}</div>}
     </div>
   );
 }

@@ -1,19 +1,32 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { z } = require("zod");
 const db = require("../db");
+const { validate } = require("../middleware/validate");
 
 const router = express.Router();
 
+// Strict input contracts: rejects bad emails, short passwords, junk roles
+// BEFORE any database work happens.
+const registerSchema = z.object({
+  name: z.string().trim().min(2, "name must be at least 2 characters").max(100),
+  email: z.string().trim().toLowerCase().email("valid email required").max(255),
+  password: z.string().min(8, "password must be at least 8 characters").max(128),
+  role: z.enum(["student", "owner"]).optional().default("student"),
+  phone: z.string().trim().max(20).optional().nullable(),
+});
+
+const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email("valid email required").max(255),
+  password: z.string().min(1, "password is required").max(128),
+});
+
 // POST /api/auth/register  body: { name, email, password, role?, phone? }
 // role: 'student' (default) or 'owner'.
-router.post("/register", async (req, res) => {
+router.post("/register", validate(registerSchema), async (req, res) => {
   const { name, email, password, role, phone } = req.body;
   const userRole = role === "owner" ? "owner" : "student";
-
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: "name, email and password are required" });
-  }
 
   try {
     // 1. Never let two accounts share an email
@@ -28,7 +41,7 @@ router.post("/register", async (req, res) => {
 
     // 3. Insert the new user
     const [result] = await db.query(
-      "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, ?) RETURNING id",
       [name, email, phone || null, passwordHash, userRole]
     );
 
@@ -49,12 +62,8 @@ router.post("/register", async (req, res) => {
 });
 
 // POST /api/auth/login  body: { email, password }
-router.post("/login", async (req, res) => {
+router.post("/login", validate(loginSchema), async (req, res) => {
   const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json({ error: "email and password are required" });
-  }
 
   try {
     // 1. Find the user by email

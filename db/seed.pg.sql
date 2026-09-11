@@ -1,21 +1,17 @@
-USE mynest;
+-- myNest seed data for PostgreSQL (converted from seed.sql).
+-- is_read 0 -> false; `groups` -> "groups"; no USE statement (connect to mynest).
 
--- 3 users. Ananya (owner of both groups + all PGs) has a real hash so you can log
--- in as the OWNER and approve join/rent requests: ananya@example.com / ananya123
--- Rohan has a real hash too, so you can log in as a STUDENT:
--- rohan@example.com / rohan123. Divyani keeps the dummy hash.
+-- 3 users. Log in as OWNER: ananya@example.com / ananya123
+-- Log in as STUDENT: rohan@example.com / rohan123
 INSERT INTO users (id, name, email, phone, password_hash, role) VALUES
   (1, 'Ananya Sharma', 'ananya@example.com', '9876500011', '$2b$10$kS4esCNj8hP2n0p4Ejn5rONB055XVKpDuXuho16zYcqsTLSXR5MeS', 'owner'),
   (2, 'Rohan Patel',  'rohan@example.com',  '9876500022', '$2b$10$vXpEE4IkQ0.aEgVS9LTWFuvW4i164FpyAK0Nf1FcfxAlKeXN9zamm', 'student'),
   (3, 'Divyani Singh', 'divyani@example.com', '9876500033', 'dummy-hash', 'student');
 
--- 2 groups: a PG group and a trip group (owner_id = who approves join requests)
-INSERT INTO `groups` (id, name, owner_id) VALUES
+INSERT INTO "groups" (id, name, owner_id) VALUES
   (1, 'Green Residency PG', 1),
   (2, 'Goa Trip 2026', 1);
 
--- memberships: who lives in which group + their fixed monthly due.
--- rent_due_day 29 = "rent due on the 29th of every month" (owner dashboard shows this).
 INSERT INTO memberships (id, user_id, group_id, monthly_due, phone, rent_due_day, bill_due_day) VALUES
   (1, 1, 1, 6500.00, '9876500011', 29, 25),
   (2, 2, 1, 6500.00, '9876500022', 29, 25),
@@ -23,14 +19,11 @@ INSERT INTO memberships (id, user_id, group_id, monthly_due, phone, rent_due_day
   (4, 1, 2, 2500.00, '9876500011', 5, 1),
   (5, 3, 2, 2500.00, '9876500033', 5, 1);
 
--- monthly cycles: one per group per month
 INSERT INTO monthly_cycles (id, group_id, month, year) VALUES
-  (1, 1, 7, 2026),   -- July 2026
-  (2, 1, 8, 2026),   -- August 2026 (current month)
+  (1, 1, 7, 2026),
+  (2, 1, 8, 2026),
   (3, 2, 8, 2026);
 
--- payments: Ananya and Rohan paid Aug rent. Divyani hasn't -> she OWES.
--- July: everyone paid. (type defaults to 'rent')
 INSERT INTO payments (id, cycle_id, membership_id, amount) VALUES
   (1, 1, 1, 6500.00),
   (2, 1, 2, 6500.00),
@@ -38,7 +31,6 @@ INSERT INTO payments (id, cycle_id, membership_id, amount) VALUES
   (4, 2, 1, 6500.00),
   (5, 2, 2, 6500.00);
 
--- 5 PGs around COEP Pune (18.5295, 73.8569). Varying lat/lng = varying distance.
 INSERT INTO pgs (id, name, address, city, college_nearby, monthly_rent, capacity, latitude, longitude, owner_id, group_id) VALUES
   (1, 'Green Residency',   '12 Shivaji Nagar, Near COEP',      'Pune', 'COEP',      6500.00, 4, 18.5295000, 73.8569000, 1, 1),
   (2, 'Sunrise PG',        '45 FC Road',                       'Pune', 'COEP',      7200.00, 3, 18.5312000, 73.8530000, 1, NULL),
@@ -46,7 +38,6 @@ INSERT INTO pgs (id, name, address, city, college_nearby, monthly_rent, capacity
   (4, 'Comfort Stay',      '201 Shirole Road',                 'Pune', 'COEP',      6900.00, 2, 18.5275000, 73.8495000, 1, NULL),
   (5, 'Dream Home PG',     '3 Sadashiv Peth',                  'Pune', 'Fergusson College', 6100.00, 5, 18.5190000, 73.8410000, 1, NULL);
 
--- colleges: the searchable names. Users type these, we find coords.
 INSERT INTO colleges (id, name, city, latitude, longitude) VALUES
   (1, 'YCCE Nagpur (Yeshwantrao Chavan College of Engineering)', 'Nagpur', 21.1195000, 79.0458000),
   (2, 'VNIT Nagpur',                 'Nagpur', 21.1274000, 79.0503000),
@@ -55,29 +46,23 @@ INSERT INTO colleges (id, name, city, latitude, longitude) VALUES
   (5, 'IIT Bombay',                  'Mumbai', 19.1334000, 72.9133000),
   (6, 'VJTI Mumbai',                 'Mumbai', 19.0222000, 72.8562000);
 
--- PGs near YCCE Nagpur (added so a Nagpur search returns results)
 INSERT INTO pgs (id, name, address, city, college_nearby, monthly_rent, capacity, latitude, longitude, owner_id, group_id) VALUES
   (6, 'Sai Residency Nagpur', '15 Laxmi Nagar, Near YCCE', 'Nagpur', 'YCCE Nagpur',  5500.00, 3, 21.1205000, 79.0442000, 1, NULL),
   (7, 'Green Nest Hostel',    '200 Manish Nagar',          'Nagpur', 'YCCE Nagpur',  4800.00, 4, 21.1178000, 79.0475000, 1, NULL),
   (8, 'City PG Nagpur',       '7 Rameshwari',              'Nagpur', 'YCCE Nagpur',  5200.00, 2, 21.1219000, 79.0415000, 1, NULL),
   (9, 'Student Villa',        '42 Shankar Nagar',          'Nagpur', 'YCCE Nagpur',  6000.00, 5, 21.1250000, 79.0490000, 1, NULL);
 
--- roommate requests: someone at these PGs needs a roommate
 INSERT INTO roommate_requests (id, pg_id, user_id, message, slots) VALUES
   (1, 1, 1, '2BHK at Green Residency, need one more flatmate', 1),
   (2, 1, 2, 'Looking for a quiet roommate, same floor',        1),
   (3, 6, 3, 'Need 2 roommates for Sai Residency',              2);
 
--- one applicant: Divyani applied to request #1
 INSERT INTO roommate_applicants (id, request_id, user_id, message, status) VALUES
   (1, 1, 3, 'Hi, I am interested! Final year CS student.', 'pending');
 
--- join request: Rohan (only in Green Residency) asks to join the Goa group.
--- Owner = Ananya, so log in as ananya@example.com / ananya123 to approve it.
 INSERT INTO group_join_requests (id, group_id, user_id, message, status) VALUES
   (1, 2, 2, 'Hi! Want to join for the Goa trip, can pay my share.', 'pending');
 
--- photos for every PG (realistic room/apartment photos from Unsplash)
 INSERT INTO photos (id, pg_id, url) VALUES
   (1, 1, 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=70'),
   (2, 1, 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=70'),
@@ -90,7 +75,6 @@ INSERT INTO photos (id, pg_id, url) VALUES
   (9, 8, 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=70'),
   (10, 9, 'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?auto=format&fit=crop&w=800&q=70');
 
--- facilities: the catalog of every amenity we track
 INSERT INTO facilities (id, name) VALUES
   (1, 'AC'),
   (2, 'WiFi'),
@@ -110,7 +94,6 @@ INSERT INTO facilities (id, name) VALUES
   (16, 'Time Restriction'),
   (17, 'Cleaning (Biweekly)');
 
--- pg_facilities: which PG has which facility (many-to-many)
 INSERT INTO pg_facilities (pg_id, facility_id) VALUES
   (1, 1), (1, 2), (1, 3), (1, 4), (1, 5),
   (2, 2), (2, 3), (2, 6), (2, 7),
@@ -122,7 +105,6 @@ INSERT INTO pg_facilities (pg_id, facility_id) VALUES
   (8, 3), (8, 6), (8, 11),
   (9, 1), (9, 2), (9, 3), (9, 8), (9, 12);
 
--- community posts: Brainly-style personals where people find their perfect roommate
 INSERT INTO roommate_posts (id, user_id, title, message, city, budget_max) VALUES
   (1, 3, 'Female roommate wanted near COEP Pune',
    'As a first-year student new to the city, I am looking for a female roommate who keeps the place clean and also agrees to keep my cat with me. Clean, safe and exactly as shown in the photos.',
@@ -134,18 +116,31 @@ INSERT INTO roommate_posts (id, user_id, title, message, city, budget_max) VALUE
    'Need a roommate near YCCE Nagpur. I study late, so looking for someone calm and non-noisy. Budget friendly, shared kitchen.',
    'Nagpur', 5000.00);
 
--- comments on those posts (one-to-many)
 INSERT INTO roommate_post_comments (id, post_id, user_id, message) VALUES
   (1, 1, 1, 'Hi! I am a female student at COEP and would love to join. I am clean and love cats.'),
   (2, 2, 3, 'I am also joining a company in Hinjewadi. Can we connect?'),
   (3, 1, 2, 'Is the cat friendly with guests? Would love to visit and see the place.');
 
--- rent requests: Rohan (only in Green Residency) applies to rent Sunrise PG.
--- Owner = Ananya, so log in as ananya@example.com / ananya123 to approve it.
 INSERT INTO rent_requests (id, pg_id, user_id, message, status) VALUES
   (1, 2, 2, 'Hi! Single room wanted at Sunrise PG from next month, no roommate needed.', 'pending');
 
--- notifications: seeded examples so the bell has content on first login
 INSERT INTO notifications (id, user_id, title, message, type, is_read) VALUES
-  (1, 2, 'Rent request sent', 'Your rent request for Sunrise PG is pending owner approval.', 'request', 0),
-  (2, 1, 'New rent request', 'Rohan Patel wants to rent a room at Sunrise PG.', 'request', 0);
+  (1, 2, 'Rent request sent', 'Your rent request for Sunrise PG is pending owner approval.', 'request', false),
+  (2, 1, 'New rent request', 'Rohan Patel wants to rent a room at Sunrise PG.', 'request', false);
+
+-- Reset SERIAL sequences past the seeded ids so new inserts don't collide.
+SELECT setval(pg_get_serial_sequence('users', 'id'), (SELECT MAX(id) FROM users));
+SELECT setval(pg_get_serial_sequence('"groups"', 'id'), (SELECT MAX(id) FROM "groups"));
+SELECT setval(pg_get_serial_sequence('memberships', 'id'), (SELECT MAX(id) FROM memberships));
+SELECT setval(pg_get_serial_sequence('monthly_cycles', 'id'), (SELECT MAX(id) FROM monthly_cycles));
+SELECT setval(pg_get_serial_sequence('payments', 'id'), (SELECT MAX(id) FROM payments));
+SELECT setval(pg_get_serial_sequence('pgs', 'id'), (SELECT MAX(id) FROM pgs));
+SELECT setval(pg_get_serial_sequence('photos', 'id'), (SELECT MAX(id) FROM photos));
+SELECT setval(pg_get_serial_sequence('facilities', 'id'), (SELECT MAX(id) FROM facilities));
+SELECT setval(pg_get_serial_sequence('roommate_requests', 'id'), (SELECT MAX(id) FROM roommate_requests));
+SELECT setval(pg_get_serial_sequence('roommate_applicants', 'id'), (SELECT MAX(id) FROM roommate_applicants));
+SELECT setval(pg_get_serial_sequence('roommate_posts', 'id'), (SELECT MAX(id) FROM roommate_posts));
+SELECT setval(pg_get_serial_sequence('roommate_post_comments', 'id'), (SELECT MAX(id) FROM roommate_post_comments));
+SELECT setval(pg_get_serial_sequence('group_join_requests', 'id'), (SELECT MAX(id) FROM group_join_requests));
+SELECT setval(pg_get_serial_sequence('rent_requests', 'id'), (SELECT MAX(id) FROM rent_requests));
+SELECT setval(pg_get_serial_sequence('notifications', 'id'), (SELECT MAX(id) FROM notifications));

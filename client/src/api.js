@@ -1,6 +1,8 @@
 // Central file for ALL backend calls. Every page imports functions from here.
-// "/api" works because of the Vite proxy we configured (client -> server).
-const API = "/api";
+// Local dev: "/api" works because of the Vite proxy (client -> server).
+// Production (Vercel frontend + Render backend): set VITE_API_URL to the
+// backend origin INCLUDING /api, e.g. https://mynest-api.onrender.com/api
+const API = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
 
 export async function searchPGs(lat, lng, radius, minRent, maxRent, college, gender) {
   const params = new URLSearchParams({ lat, lng, radius });
@@ -72,7 +74,7 @@ export async function login(email, password) {
 function authHeaders() {
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${localStorage.getItem("fairnest_token")}`,
+    Authorization: `Bearer ${localStorage.getItem("mynest_token")}`,
   };
 }
 
@@ -216,7 +218,7 @@ export async function getMyRentRequests() {
 export async function createProperty(formData) {
   const res = await fetch(`${API}/properties`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${localStorage.getItem("fairnest_token")}` },
+    headers: { Authorization: `Bearer ${localStorage.getItem("mynest_token")}` },
     body: formData,
   });
   if (res.status === 401) throw new Error("Please log in first");

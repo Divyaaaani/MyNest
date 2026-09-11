@@ -59,9 +59,9 @@ router.post("/", upload.array("photos", 5), async (req, res) => {
   try {
     // 1. Insert the listing (photos go in a second table).
     const [result] = await db.query(
-      `INSERT INTO pgs
-        (name, address, city, college_nearby, college_id, monthly_rent, gender, capacity, bhk, area_sqft, furnished, description, latitude, longitude, owner_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO pgs
+       (name, address, city, college_nearby, college_id, monthly_rent, gender, capacity, bhk, area_sqft, furnished, description, latitude, longitude, owner_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
       [
         name,
         address || "",
@@ -73,7 +73,7 @@ router.post("/", upload.array("photos", 5), async (req, res) => {
         capacity || null,
         bhk || null,
         areaSqft || null,
-        furnished === "1" || furnished === true ? 1 : 0,
+        furnished === "1" || furnished === true ? true : false,
         description || null,
         latitude,
         longitude,
@@ -102,7 +102,7 @@ router.post("/", upload.array("photos", 5), async (req, res) => {
       );
       for (const f of rows) {
         await db.query(
-          "INSERT IGNORE INTO pg_facilities (pg_id, facility_id) VALUES (?, ?)",
+          "INSERT INTO pg_facilities (pg_id, facility_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
           [pgId, f.id]
         );
       }

@@ -7,7 +7,7 @@ import "leaflet/dist/leaflet.css";
 
 const pinIcon = L.divIcon({
   className: "pg-marker",
-  html: `<div class="pg-marker-inner" style="background:#00b377;color:#fff">★</div>`,
+  html: `<div class="pg-marker-inner" style="background:#00a06d;color:#fff"><span>★</span></div>`,
   iconSize: [26, 34],
   iconAnchor: [13, 32],
 });
@@ -70,8 +70,8 @@ function LocationPicker({ location, onPick }) {
 }
 
 export default function AddProperty() {
-  const token = localStorage.getItem("fairnest_token");
-  const me = JSON.parse(localStorage.getItem("fairnest_user") || "{}");
+  const token = localStorage.getItem("mynest_token");
+  const me = JSON.parse(localStorage.getItem("mynest_user") || "{}");
 
   const [form, setForm] = useState({
     name: "",

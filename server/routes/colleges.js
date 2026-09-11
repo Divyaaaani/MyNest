@@ -16,7 +16,7 @@ router.get("/", async (req, res) => {
   const [rows] = await db.query(
     `SELECT id, name, city, latitude, longitude
      FROM colleges
-     WHERE name LIKE ?
+     WHERE name ILIKE ?
      ORDER BY name
      LIMIT 10`,
     [`%${q.trim()}%`]

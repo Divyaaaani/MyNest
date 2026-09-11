@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { getMyGroups, getGroup, getMyDues, markPaid, getGroupJoinRequests, decideJoinRequest, getNotifications, getMyRentRequests } from "../api";
 import Reveal from "../components/Reveal";
+import { HouseIcon } from "../components/Illustrations";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -9,8 +10,8 @@ const MONTHS = [
 ];
 
 export default function Dashboard() {
-  const token = localStorage.getItem("fairnest_token");
-  const me = JSON.parse(localStorage.getItem("fairnest_user") || "{}");
+  const token = localStorage.getItem("mynest_token");
+  const me = JSON.parse(localStorage.getItem("mynest_user") || "{}");
   const [groups, setGroups] = useState([]);
   const [selected, setSelected] = useState(null);
   const [data, setData] = useState(null);
@@ -119,7 +120,14 @@ export default function Dashboard() {
     }
   }
 
-  if (loading) return <div className="container py-4">Loading...</div>;
+  if (loading)
+    return (
+      <div className="container py-4">
+        <div className="fn-skeleton mb-3" style={{ height: 34, width: "32%" }} />
+        <div className="fn-skeleton mb-3" style={{ height: 120 }} />
+        <div className="fn-skeleton fn-skel-line" style={{ width: "70%" }} />
+      </div>
+    );
 
   const paid = data ? data.members.filter((m) => m.paid) : [];
   const collected = paid.reduce((sum, m) => sum + Number(m.paidAmount), 0);
@@ -161,14 +169,10 @@ export default function Dashboard() {
                           src={a.photoUrl}
                           alt={a.pgName}
                           className="fn-app-photo"
-                          style={{ width: 44, height: 44, objectFit: "cover", borderRadius: 8 }}
                         />
                       ) : (
-                        <div
-                          className="d-flex align-items-center justify-content-center text-muted bg-light"
-                          style={{ width: 44, height: 44, borderRadius: 8, fontSize: 20 }}
-                        >
-                          🏠
+                        <div className="fn-app-photo fn-app-photo-fallback" aria-hidden="true">
+                          <HouseIcon />
                         </div>
                       )}
                       <div>
@@ -479,7 +483,7 @@ export default function Dashboard() {
         </>
       )}
 
-      {error && <p className="text-danger">{error}</p>}
+      {error && <div className="fn-alert fn-alert-error" role="alert">{error}</div>}
 
       {/* ---------- Payment modal (simulated UPI) ---------- */}
       {paying && payStage && (

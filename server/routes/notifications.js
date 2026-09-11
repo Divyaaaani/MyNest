@@ -36,10 +36,10 @@ router.get("/", async (req, res) => {
   );
 
   const [unreadRows] = await db.query(
-    "SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0",
+    "SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = false",
     [req.userId]
   );
-  const unread = unreadRows[0].c;
+  const unread = Number(unreadRows[0].c);
 
   // 2. Live reminders: rent due within the next 5 days.
   //    rent_due_day is a day-of-month, so compute the next occurrence.
@@ -47,7 +47,7 @@ router.get("/", async (req, res) => {
   const [memberships] = await db.query(
     `SELECT m.id AS membership_id, m.monthly_due, m.rent_due_day, g.name AS group_name, g.id AS group_id
      FROM memberships m
-     JOIN \`groups\` g ON g.id = m.group_id
+     JOIN "groups" g ON g.id = m.group_id
      WHERE m.user_id = ?`,
     [req.userId]
   );
@@ -90,7 +90,7 @@ router.get("/", async (req, res) => {
 
 // POST /api/notifications/read  -> mark all stored notifications as read
 router.post("/read", async (req, res) => {
-  await db.query("UPDATE notifications SET is_read = 1 WHERE user_id = ?", [req.userId]);
+  await db.query("UPDATE notifications SET is_read = true WHERE user_id = ?", [req.userId]);
   res.json({ ok: true });
 });
 

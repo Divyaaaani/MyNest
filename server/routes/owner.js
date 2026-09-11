@@ -41,7 +41,7 @@ async function ensureCycle(groupId) {
   const year = now.getFullYear();
 
   await db.query(
-    "INSERT IGNORE INTO monthly_cycles (group_id, month, year) VALUES (?, ?, ?)",
+    "INSERT INTO monthly_cycles (group_id, month, year) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
     [groupId, month, year]
   );
 
@@ -64,7 +64,7 @@ router.get("/pgs", async (req, res) => {
             (SELECT COUNT(*) FROM rent_requests r
                WHERE r.pg_id = p.id AND r.status = 'pending') AS pending_requests
      FROM pgs p
-     LEFT JOIN \`groups\` g ON g.id = p.group_id
+     LEFT JOIN "groups" g ON g.id = p.group_id
      WHERE p.owner_id = ?
      ORDER BY p.name`,
     [req.userId]
@@ -177,7 +177,7 @@ router.post("/pgs/:id/rent-requests/:requestId/decide", async (req, res) => {
     let groupId = pg.group_id;
     if (!groupId) {
       const [grp] = await db.query(
-        "INSERT INTO `groups` (name, owner_id) VALUES (?, ?)",
+        "INSERT INTO \"groups\" (name, owner_id) VALUES (?, ?) RETURNING id",
         [pg.name, req.userId]
       );
       groupId = grp.insertId;
@@ -185,7 +185,7 @@ router.post("/pgs/:id/rent-requests/:requestId/decide", async (req, res) => {
     }
 
     await db.query(
-      "INSERT IGNORE INTO memberships (user_id, group_id, monthly_due, phone) VALUES (?, ?, ?, ?)",
+      "INSERT INTO memberships (user_id, group_id, monthly_due, phone) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
       [tenantUserId, groupId, monthlyDue, applicant[0].phone]
     );
 
@@ -231,7 +231,7 @@ router.post("/pgs/:id/tenants", async (req, res) => {
     userId = userRows[0].id;
   } else {
     const [resu] = await db.query(
-      "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'student')",
+      "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'student') RETURNING id",
       [name, phone + "@mynest.local", phone, "tenant-onboarding"]
     );
     userId = resu.insertId;
@@ -241,7 +241,7 @@ router.post("/pgs/:id/tenants", async (req, res) => {
   let groupId = pg.group_id;
   if (!groupId) {
     const [grp] = await db.query(
-      "INSERT INTO `groups` (name, owner_id) VALUES (?, ?)",
+      "INSERT INTO \"groups\" (name, owner_id) VALUES (?, ?) RETURNING id",
       [pg.name, req.userId]
     );
     groupId = grp.insertId;
@@ -251,7 +251,7 @@ router.post("/pgs/:id/tenants", async (req, res) => {
   await db.query(
     `INSERT INTO memberships (user_id, group_id, monthly_due, phone, rent_due_day, bill_due_day)
      VALUES (?, ?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE monthly_due = VALUES(monthly_due), phone = VALUES(phone)`,
+     ON CONFLICT (group_id, user_id) DO UPDATE SET monthly_due = EXCLUDED.monthly_due, phone = EXCLUDED.phone`,
     [userId, groupId, monthlyDue, phone || null, rentDueDay || 1, billDueDay || 1]
   );
 
@@ -296,7 +296,7 @@ router.post("/pgs/:id/members/:membershipId/payment", async (req, res) => {
   await db.query(
     `INSERT INTO payments (cycle_id, membership_id, type, amount)
      VALUES (?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE amount = VALUES(amount)`,
+     ON CONFLICT (cycle_id, membership_id, type) DO UPDATE SET amount = EXCLUDED.amount`,
     [cycleId, membershipId, payType, amount]
   );
 

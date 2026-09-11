@@ -15,7 +15,7 @@ router.post("/pgs/:id/roommates", requireAuth, async (req, res) => {
   }
 
   const [result] = await db.query(
-    "INSERT INTO roommate_requests (pg_id, user_id, message, slots) VALUES (?, ?, ?, ?)",
+    "INSERT INTO roommate_requests (pg_id, user_id, message, slots) VALUES (?, ?, ?, ?) RETURNING id",
     [pgId, req.userId, message, slots || 1]
   );
 
@@ -39,9 +39,9 @@ router.post("/roommates/:id/apply", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "You cannot join your own request" });
   }
 
-  // INSERT IGNORE: the UNIQUE key means a user can apply only once.
+  // ON CONFLICT DO NOTHING: the UNIQUE key means a user can apply only once.
   await db.query(
-    "INSERT IGNORE INTO roommate_applicants (request_id, user_id, message) VALUES (?, ?, ?)",
+    "INSERT INTO roommate_applicants (request_id, user_id, message) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
     [requestId, req.userId, message || null]
   );
 

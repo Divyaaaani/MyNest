@@ -13,9 +13,9 @@ async function ensureCycle(groupId) {
   const month = now.getMonth() + 1; // JS months are 0-11, so +1
   const year = now.getFullYear();
 
-  // INSERT IGNORE: if the cycle already exists, it does nothing (that's the UNIQUE key)
+  // ON CONFLICT DO NOTHING: if the cycle already exists, it does nothing (that's the UNIQUE key)
   await db.query(
-    "INSERT IGNORE INTO monthly_cycles (group_id, month, year) VALUES (?, ?, ?)",
+    "INSERT INTO monthly_cycles (group_id, month, year) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
     [groupId, month, year]
   );
 
@@ -32,7 +32,7 @@ router.get("/mine", async (req, res) => {
     `SELECT g.id, g.name, g.owner_id, m.monthly_due, g.created_at,
             (SELECT COUNT(*) FROM memberships m2 WHERE m2.group_id = g.id) AS member_count
      FROM memberships m
-     JOIN \`groups\` g ON g.id = m.group_id
+     JOIN "groups" g ON g.id = m.group_id
      WHERE m.user_id = ?
      ORDER BY g.created_at DESC`,
     [req.userId]
@@ -49,8 +49,9 @@ router.get("/mine/dues", async (req, res) => {
 
   // Make sure this month's cycle exists for every group the user is in.
   await db.query(
-    `INSERT IGNORE INTO monthly_cycles (group_id, month, year)
-     SELECT m.group_id, ?, ? FROM memberships m WHERE m.user_id = ?`,
+    `INSERT INTO monthly_cycles (group_id, month, year)
+     SELECT m.group_id, ?, ? FROM memberships m WHERE m.user_id = ?
+     ON CONFLICT DO NOTHING`,
     [month, year, req.userId]
   );
 
@@ -63,7 +64,7 @@ router.get("/mine/dues", async (req, res) => {
               WHERE p.membership_id = m.id AND mc.group_id = g.id
                 AND mc.month = ? AND mc.year = ?) AS payment_id
      FROM memberships m
-     JOIN \`groups\` g ON g.id = m.group_id
+     JOIN "groups" g ON g.id = m.group_id
      WHERE m.user_id = ?
      ORDER BY g.created_at DESC`,
     [month, year, req.userId]
@@ -97,7 +98,7 @@ router.get("/:id", async (req, res) => {
   const cycleId = await ensureCycle(groupId);
 
   const [groupRows] = await db.query(
-    "SELECT id, name, owner_id FROM `groups` WHERE id = ?",
+    "SELECT id, name, owner_id FROM \"groups\" WHERE id = ?",
     [groupId]
   );
   const group = groupRows[0];
@@ -143,9 +144,9 @@ router.post("/:id/join-requests", async (req, res) => {
     return res.status(400).json({ error: "You are already a member of this group" });
   }
 
-  // INSERT IGNORE: the UNIQUE key stops duplicate requests.
+  // ON CONFLICT DO NOTHING: the UNIQUE key stops duplicate requests.
   const [result] = await db.query(
-    "INSERT IGNORE INTO group_join_requests (group_id, user_id, message) VALUES (?, ?, ?)",
+    "INSERT INTO group_join_requests (group_id, user_id, message) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
     [groupId, req.userId, message || null]
   );
   if (result.affectedRows === 0) {
@@ -160,7 +161,7 @@ router.get("/:id/join-requests", async (req, res) => {
   const groupId = req.params.id;
 
   const [groupRows] = await db.query(
-    "SELECT owner_id FROM `groups` WHERE id = ?",
+    "SELECT owner_id FROM \"groups\" WHERE id = ?",
     [groupId]
   );
   if (groupRows.length === 0) return res.status(404).json({ error: "Group not found" });
@@ -194,7 +195,7 @@ router.post("/:id/join-requests/:requestId/decide", async (req, res) => {
   }
 
   const [groupRows] = await db.query(
-    "SELECT owner_id FROM `groups` WHERE id = ?",
+    "SELECT owner_id FROM \"groups\" WHERE id = ?",
     [groupId]
   );
   if (groupRows.length === 0) return res.status(404).json({ error: "Group not found" });
@@ -269,11 +270,11 @@ router.post("/:id/payments", async (req, res) => {
 
   const cycleId = await ensureCycle(groupId);
 
-  // ON DUPLICATE KEY: if they already paid this month, update instead of duplicate.
+  // ON CONFLICT: if they already paid this month, update instead of duplicate.
   await db.query(
     `INSERT INTO payments (cycle_id, membership_id, amount)
      VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE amount = VALUES(amount)`,
+     ON CONFLICT (cycle_id, membership_id, type) DO UPDATE SET amount = EXCLUDED.amount`,
     [cycleId, membershipId, amount]
   );
 

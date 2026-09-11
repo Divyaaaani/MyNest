@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS fairnest;
-USE fairnest;
+CREATE DATABASE IF NOT EXISTS mynest;
+USE mynest;
 
 -- Drop in reverse FK order so re-runs stay clean (dev only)
 DROP TABLE IF EXISTS notifications, rent_requests, group_join_requests, roommate_post_comments, roommate_posts, pg_facilities, facilities, roommate_applicants, roommate_requests, photos, payments, pgs, monthly_cycles, memberships, `groups`, users, colleges;

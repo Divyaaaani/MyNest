@@ -99,11 +99,23 @@ function photoUrl(photoName) {
   return `https://places.googleapis.com/v1/${clean}/media?maxHeightPx=900&key=${KEY}`;
 }
 
-function download(url, dest) {
+function download(url, dest, redirects = 5) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest);
     https
       .get(url, (res) => {
+        // Google's photo endpoint answers 302 -> follow it (https.get won't).
+        if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
+          if (!res.headers.location || redirects === 0) {
+            file.close();
+            fs.unlinkSync(dest);
+            return reject(new Error("HTTP " + res.statusCode));
+          }
+          res.resume(); // drain before recursing
+          file.close();
+          fs.unlinkSync(dest, () => {});
+          return resolve(download(res.headers.location, dest, redirects - 1));
+        }
         if (res.statusCode !== 200) {
           file.close();
           fs.unlinkSync(dest);
@@ -150,6 +162,12 @@ async function main() {
         continue;
       }
 
+      // Skip obvious non-PGs (hotels, schools, trusts...). Real hostels stay.
+      if (/hotel|school|trust|restaurant|hospital|banquet|mall/i.test(name)) {
+        console.log(`  skip "${name}" (not a PG/hostel)`);
+        continue;
+      }
+
       // Skip if we already added this exact PG (same name + college).
       const [dup] = await db.query(
         "SELECT id FROM pgs WHERE name = ? AND college_nearby = ?",
@@ -164,7 +182,7 @@ async function main() {
         `INSERT INTO pgs
            (name, address, city, college_nearby, monthly_rent, capacity,
             latitude, longitude, owner_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
         [
           name.slice(0, 150),
           address.slice(0, 255),

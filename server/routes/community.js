@@ -14,7 +14,7 @@ router.get("/community/posts", async (req, res) => {
      JOIN users u ON u.id = p.user_id
      ORDER BY p.id DESC`
   );
-  res.json({ posts: rows });
+  res.json({ posts: rows.map((p) => ({ ...p, comment_count: Number(p.comment_count) })) });
 });
 
 // GET /api/community/posts/:id/comments -> all comments on one post, oldest first
@@ -40,7 +40,7 @@ router.post("/community/posts", requireAuth, async (req, res) => {
   }
 
   const [result] = await db.query(
-    "INSERT INTO roommate_posts (user_id, title, message, city, budget_max) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO roommate_posts (user_id, title, message, city, budget_max) VALUES (?, ?, ?, ?, ?) RETURNING id",
     [req.userId, title, message, city, budgetMax || null]
   );
 
@@ -58,7 +58,7 @@ router.post("/community/posts/:id/comments", requireAuth, async (req, res) => {
   }
 
   const [result] = await db.query(
-    "INSERT INTO roommate_post_comments (post_id, user_id, message) VALUES (?, ?, ?)",
+    "INSERT INTO roommate_post_comments (post_id, user_id, message) VALUES (?, ?, ?) RETURNING id",
     [postId, req.userId, message.trim()]
   );
 

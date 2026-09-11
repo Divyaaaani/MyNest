@@ -1,0 +1,27 @@
+# Render blueprint for the myNest API (backend only; frontend lives on Vercel).
+# Usage: Render Dashboard -> New -> Blueprint -> select this repo.
+# Secrets (PG_*, JWT_SECRET, CLIENT_URL) are entered in the dashboard.
+services:
+  - type: web
+    name: mynest-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PG_HOST
+        sync: false
+      - key: PG_PORT
+        value: 5432
+      - key: PG_USER
+        sync: false
+      - key: PG_PASSWORD
+        sync: false
+      - key: PG_DATABASE
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLIENT_URL
+        sync: false

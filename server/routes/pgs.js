@@ -40,24 +40,28 @@ router.get("/", async (req, res) => {
 
     // Haversine formula: distance in km between two points on Earth.
     // 6371 = Earth's radius in km.
+    // Postgres can't use the SELECT alias (distance_km) in HAVING, so the
+    // whole query is wrapped: inner SELECT computes, outer SELECT filters.
     const sql = `
-       SELECT
-         p.id, p.name, p.address, p.city, p.college_nearby, p.college_id, p.monthly_rent, p.gender, p.capacity,
-         p.latitude, p.longitude,
-         (SELECT ph.url FROM photos ph WHERE ph.pg_id = p.id ORDER BY ph.id LIMIT 1) AS photo_url,
-         -- GROUP_CONCAT: MySQL's trick for returning a list inside one row (comma-separated)
-         (SELECT GROUP_CONCAT(f.name ORDER BY f.id SEPARATOR ', ')
-            FROM pg_facilities pf JOIN facilities f ON f.id = pf.facility_id
-           WHERE pf.pg_id = p.id) AS facilities,
-         (6371 * acos(
-            cos(radians(?)) * cos(radians(p.latitude)) *
-            cos(radians(p.longitude) - radians(?)) +
-            sin(radians(?)) * sin(radians(p.latitude))
-          )) AS distance_km
-       FROM pgs p
-       ${conditions.length ? "WHERE " + conditions.join(" AND ") : ""}
-       HAVING distance_km <= ?
-       ${college ? "OR p.college_id = (SELECT id FROM colleges WHERE name = ?) OR p.college_nearby = ?" : ""}
+       SELECT * FROM (
+         SELECT
+           p.id, p.name, p.address, p.city, p.college_nearby, p.college_id, p.monthly_rent, p.gender, p.capacity,
+           p.latitude, p.longitude,
+           (SELECT ph.url FROM photos ph WHERE ph.pg_id = p.id ORDER BY ph.id LIMIT 1) AS photo_url,
+           -- STRING_AGG: Postgres' trick for returning a list inside one row (comma-separated)
+           (SELECT STRING_AGG(f.name, ', ' ORDER BY f.id)
+              FROM pg_facilities pf JOIN facilities f ON f.id = pf.facility_id
+             WHERE pf.pg_id = p.id) AS facilities,
+           (6371 * acos(
+              cos(radians(?)) * cos(radians(p.latitude)) *
+              cos(radians(p.longitude) - radians(?)) +
+              sin(radians(?)) * sin(radians(p.latitude))
+            )) AS distance_km
+         FROM pgs p
+         ${conditions.length ? "WHERE " + conditions.join(" AND ") : ""}
+       ) AS sub
+       WHERE distance_km <= ?
+       ${college ? "OR college_id = (SELECT id FROM colleges WHERE name = ?) OR college_nearby = ?" : ""}
        ORDER BY distance_km`;
 
     params.push(radius);
@@ -85,7 +89,7 @@ router.get("/:id", async (req, res) => {
             p.group_id, p.owner_id,
             u.name AS owner_name,
             u.phone AS owner_phone,
-            (SELECT GROUP_CONCAT(f.name ORDER BY f.id SEPARATOR ', ')
+            (SELECT STRING_AGG(f.name, ', ' ORDER BY f.id)
                FROM pg_facilities pf JOIN facilities f ON f.id = pf.facility_id
               WHERE pf.pg_id = p.id) AS facilities
      FROM pgs p JOIN users u ON u.id = p.owner_id
@@ -144,7 +148,7 @@ router.post("/:id/rent-requests", requireAuth, async (req, res) => {
   }
 
   const [result] = await db.query(
-    "INSERT IGNORE INTO rent_requests (pg_id, user_id, message) VALUES (?, ?, ?)",
+    "INSERT INTO rent_requests (pg_id, user_id, message) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
     [pgId, req.userId, message || null]
   );
   if (result.affectedRows === 0) {
@@ -239,7 +243,7 @@ router.get("/my/rent-requests", requireAuth, async (req, res) => {
           cycleId = cycleRows[0].id;
         } else {
           const [ins] = await db.query(
-            "INSERT IGNORE INTO monthly_cycles (group_id, month, year) VALUES (?, ?, ?)",
+            "INSERT INTO monthly_cycles (group_id, month, year) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
             [r.group_id, month, year]
           );
           const [again] = await db.query(

@@ -41,7 +41,7 @@ export default function Roommates() {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
 
-  const isLoggedIn = !!localStorage.getItem("fairnest_token");
+  const isLoggedIn = !!localStorage.getItem("mynest_token");
 
   async function loadPosts() {
     setLoading(true);

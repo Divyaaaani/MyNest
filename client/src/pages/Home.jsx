@@ -1,10 +1,22 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { FaLocationDot, FaMagnifyingGlass, FaMoneyBillWave, FaRoute, FaPerson, FaPersonDress } from "react-icons/fa6";
+import { FaLocationDot, FaMagnifyingGlass, FaMoneyBillWave, FaRoute, FaPerson, FaPersonDress, FaRegPaperPlane } from "react-icons/fa6";
 import { searchPGs, searchColleges } from "../api";
 import PGMap from "../components/PGMap";
 import Reveal from "../components/Reveal";
 import FacilityIcon from "../components/FacilityIcon";
+import {
+  HouseIcon,
+  BuildingIcon,
+  PaidCheckIcon,
+  ChecklistIcon,
+  HandshakeIcon,
+  GroupIcon,
+  EnvelopeIcon,
+  FlagIcon,
+  ChatIcon,
+  HouseArt,
+} from "../components/Illustrations";
 
 const RENT_FILTERS = [
   { key: "all",     label: "Any budget",      min: null, max: null },
@@ -50,6 +62,8 @@ const JOURNEY = [
   },
 ];
 
+const JOURNEY_ICONS = [HouseIcon, ChecklistIcon, HandshakeIcon, GroupIcon];
+
 const MARQUEE_COLLEGES = [
   "YCCE Nagpur",
   "VNIT Nagpur",
@@ -74,6 +88,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const dropdownRef = useRef(null);
+  const resultsRef = useRef(null);
 
   useEffect(() => {
     if (!query.trim()) {
@@ -124,6 +139,11 @@ export default function Home() {
       setAllPgs(data.pgs);
       setPgs(data.pgs);
       setCenter({ lat: Number(c.latitude), lng: Number(c.longitude) });
+      // Results render below the fold — take the user straight to them
+      // so it's obvious the search finished.
+      setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 60);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -175,6 +195,60 @@ export default function Home() {
     );
   }
 
+  // Floating hero cards — drag them around inside the illustration panel.
+  function DraggableCard({ className, children }) {
+    const ref = useRef(null);
+    const drag = useRef({ active: false, dx: 0, dy: 0, startX: 0, startY: 0 });
+
+    function onPointerDown(e) {
+      if (e.button !== 0) return;
+      drag.current = { active: true, dx: 0, dy: 0, startX: e.clientX, startY: e.clientY };
+      ref.current.setPointerCapture(e.pointerId);
+      ref.current.classList.add("fn-art-dragging");
+      e.preventDefault();
+    }
+
+    function onPointerMove(e) {
+      const d = drag.current;
+      if (!d.active) return;
+      const card = ref.current;
+      const parent = card.parentElement;
+      const pr = parent.getBoundingClientRect();
+      const cr = card.getBoundingClientRect();
+      let nx = d.dx + (e.clientX - d.startX);
+      let ny = d.dy + (e.clientY - d.startY);
+      const maxX = pr.width - cr.width;
+      const maxY = pr.height - cr.height;
+      nx = Math.max(0, Math.min(nx, maxX));
+      ny = Math.max(0, Math.min(ny, maxY));
+      d.dx = nx;
+      d.dy = ny;
+      d.startX = e.clientX;
+      d.startY = e.clientY;
+      card.style.transform = `translate(${nx}px, ${ny}px)`;
+    }
+
+    function onPointerUp() {
+      if (!drag.current.active) return;
+      drag.current.active = false;
+      ref.current.classList.remove("fn-art-dragging");
+      ref.current.classList.add("fn-art-fixed");
+    }
+
+    return (
+      <div
+        ref={ref}
+        className={`fn-art-card ${className}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        title="Drag me"
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
     <>
       {/* ---------- Hero ---------- */}
@@ -188,13 +262,13 @@ export default function Home() {
               <Reveal>
                 <span className="fn-hero-badge">Zero brokerage · Verified listings</span>
                 <h1>
-                  Find your perfect <em className="fn-grad-text">PG</em>
+                  Your next <em className="fn-grad-text">home</em>
                   <br />
-                  near your college
+                  is closer than you think
                 </h1>
                 <p className="fn-hero-sub">
-                  Compare facilities and rent, find a roommate, and track payments
-                  with your group — all in one place.
+                  Find a PG, meet your roommates, and make a new place feel like
+                  home.
                 </p>
               </Reveal>
 
@@ -226,8 +300,12 @@ export default function Home() {
                         )}
                       </div>
                       <button type="submit" className="btn btn-primary fn-search-btn fn-btn-shine" disabled={loading}>
-                        <FaMagnifyingGlass className="me-1" />
-                        {loading ? "Searching..." : "Search"}
+                        {loading ? (
+                          <span className="fn-btn-spinner" aria-hidden="true" />
+                        ) : (
+                          <FaMagnifyingGlass className="me-1" />
+                        )}
+                        {loading ? "Finding…" : "Find PGs"}
                       </button>
                     </div>
 
@@ -292,54 +370,52 @@ export default function Home() {
               {error && <p className="text-danger mt-2 mb-0">{error}</p>}
             </div>
 
-            {/* CSS-only illustration on the right */}
+            {/* Floating illustration cards on the right */}
             <div className="col-lg-5 d-none d-lg-block">
               <Reveal delay={160}>
                 <div className="fn-hero-art">
-                  <div className="fn-art-card fn-art-card-1">
+                  <DraggableCard className="fn-art-card-1">
                     <div className="fn-art-glass">
-                      <div className="fn-art-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="m3 10 9-7 9 7" />
-                          <path d="M5 9v11h14V9" />
-                          <path d="M9 20v-6h6v6" />
-                        </svg>
-                      </div>
-                      <div>
+                      <span className="fn-art-icon fn-art-icon-house">
+                        <HouseIcon />
+                      </span>
+                      <div className="fn-art-info">
                         <div className="fn-art-label">Sunrise PG</div>
                         <div className="fn-art-sub">2.1 km · Rs 7,200</div>
                       </div>
+                      <span className="fn-art-house">
+                        <HouseArt tone="terracotta" />
+                      </span>
                     </div>
-                  </div>
-                  <div className="fn-art-card fn-art-card-2">
+                  </DraggableCard>
+                  <DraggableCard className="fn-art-card-2">
                     <div className="fn-art-glass">
-                      <div className="fn-art-icon fn-art-icon-accent">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M3 21h18" />
-                          <path d="M5 21V7l7-5 7 5v14" />
-                          <path d="M9 21v-6h6v6" />
-                        </svg>
-                      </div>
-                      <div>
+                      <span className="fn-art-icon fn-art-icon-building">
+                        <BuildingIcon />
+                      </span>
+                      <div className="fn-art-info">
                         <div className="fn-art-label">Green Residency</div>
                         <div className="fn-art-sub">1 room left</div>
                       </div>
+                      <span className="fn-art-house">
+                        <HouseArt tone="green" />
+                      </span>
                     </div>
-                  </div>
-                  <div className="fn-art-card fn-art-card-3">
+                  </DraggableCard>
+                  <DraggableCard className="fn-art-card-3">
                     <div className="fn-art-glass">
-                      <div className="fn-art-icon fn-art-icon-paid">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                          <path d="m9 11 3 3L22 4" />
-                        </svg>
-                      </div>
-                      <div>
+                      <span className="fn-art-icon fn-art-icon-paid">
+                        <PaidCheckIcon />
+                      </span>
+                      <div className="fn-art-info">
                         <div className="fn-art-label">Rent paid</div>
                         <div className="fn-art-sub">August · all clear</div>
                       </div>
+                      <span className="fn-art-house">
+                        <HouseArt tone="amber" />
+                      </span>
                     </div>
-                  </div>
+                  </DraggableCard>
                 </div>
               </Reveal>
             </div>
@@ -368,17 +444,23 @@ export default function Home() {
             </p>
           </Reveal>
           <div className="row g-4">
-            {JOURNEY.map((s, i) => (
-              <div className="col-md-6 col-lg-3" key={s.step}>
-                <Reveal delay={i * 120}>
-                  <div className="fn-journey-card">
-                    <span className="fn-journey-num">{s.step}</span>
-                    <h6>{s.title}</h6>
-                    <p className="mb-0">{s.text}</p>
-                  </div>
-                </Reveal>
-              </div>
-            ))}
+            {JOURNEY.map((s, i) => {
+              const Icon = JOURNEY_ICONS[i];
+              return (
+                <div className="col-md-6 col-lg-3" key={s.step}>
+                  <Reveal delay={i * 120}>
+                    <div className="fn-journey-card">
+                      <span className="fn-journey-step">{s.step}</span>
+                      <span className={`fn-journey-ico fn-journey-ico-${i + 1}`}>
+                        {Icon && <Icon />}
+                      </span>
+                      <h6>{s.title}</h6>
+                      <p className="mb-0">{s.text}</p>
+                    </div>
+                  </Reveal>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -390,6 +472,9 @@ export default function Home() {
             </p>
           </Reveal>
         )}
+
+        {/* Scroll target: search results land here */}
+        <div ref={resultsRef} className="fn-results-anchor" />
 
         {/* Results summary strip */}
         {!loading && pgs && (
@@ -436,20 +521,30 @@ export default function Home() {
                     <Reveal delay={i * 100}>
                       <Link to={`/pg/${pg.id}`} className="text-decoration-none">
                         <div className="card fn-pg-card h-100">
-                          {pg.photo_url && (
-                            <div className="fn-pg-img-wrap">
+                          <div className="fn-pg-img-wrap">
+                            {pg.photo_url ? (
                               <img
                                 src={pg.photo_url}
                                 className="fn-pg-img"
                                 alt={pg.name}
                                 loading="lazy"
                               />
-                            </div>
-                          )}
+                            ) : (
+                              <div className="fn-pg-noimg" aria-hidden="true">
+                                <HouseIcon />
+                              </div>
+                            )}
+                            <span className="fn-pg-flag fn-pg-flag-l">{Number(pg.distance_km).toFixed(1)} km away</span>
+                            <span className="fn-pg-flag fn-pg-flag-r">✓ Verified</span>
+                          </div>
                           <div className="card-body">
-                            <div className="d-flex justify-content-between align-items-start">
+                            <div className="d-flex justify-content-between align-items-start gap-2">
                               <h5 className="card-title mb-0 fn-pg-name">{pg.name}</h5>
-                              <span className="fn-distance">{Number(pg.distance_km).toFixed(1)} km</span>
+                              {pg.gender === "male" ? (
+                                <span className="fn-gender-badge" title="Boys only"><FaPerson /> Boys</span>
+                              ) : pg.gender === "female" ? (
+                                <span className="fn-gender-badge fn-gender-badge-f" title="Girls only"><FaPersonDress /> Girls</span>
+                              ) : null}
                             </div>
                             <p className="card-text text-muted small mb-2">
                               {pg.address}, {pg.city}
@@ -461,19 +556,9 @@ export default function Home() {
                                 </span>
                               ))}
                             </div>
-                            <div className="d-flex justify-content-between align-items-end">
-                              <p className="fn-price mb-0">
-                                Rs {pg.monthly_rent} <span className="small text-muted">/month</span>
-                              </p>
-                              <div className="d-flex align-items-center gap-1">
-                                {pg.gender === "male" ? (
-                                  <span className="fn-gender-badge" title="Boys only"><FaPerson /> Boys</span>
-                                ) : pg.gender === "female" ? (
-                                  <span className="fn-gender-badge fn-gender-badge-f" title="Girls only"><FaPersonDress /> Girls</span>
-                                ) : null}
-                                <span className="fn-verified-badge">✓ Verified</span>
-                              </div>
-                            </div>
+                            <p className="fn-price mb-0">
+                              Rs {Number(pg.monthly_rent).toLocaleString("en-IN")} <span className="small text-muted">/month</span>
+                            </p>
                             <span className="btn btn-primary btn-sm w-100 fn-view-btn mt-3">
                               View details
                             </span>
@@ -500,7 +585,23 @@ export default function Home() {
       <section className="fn-contact">
         <div className="container">
           <Reveal>
-            <h2 className="fn-section-title text-center fn-flourish">Got a question or a report?</h2>
+            <h2 className="fn-section-title text-center fn-flourish">
+              Got a question or a report?
+              <span className="fn-contact-wave" aria-hidden="true">
+                <svg className="fn-plane-trail" viewBox="0 0 96 60" fill="none" aria-hidden="true">
+                  <path
+                    d="M8 52 C 30 50, 46 44, 62 26"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeDasharray="1 7"
+                    opacity="0.65"
+                  />
+                  <circle cx="7" cy="52" r="3.5" stroke="currentColor" strokeWidth="2" strokeDasharray="2 3" opacity="0.65" />
+                </svg>
+                <FaRegPaperPlane className="fn-plane" />
+              </span>
+            </h2>
             <p className="fn-section-sub text-center">
               Spotted something wrong on a listing, or want to reach the myNest team?
               We're one message away.
@@ -511,10 +612,7 @@ export default function Home() {
               <Reveal delay={60}>
                 <div className="fn-contact-card">
                   <span className="fn-contact-icon fn-contact-icon-mail">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
-                      <rect x="2" y="4" width="20" height="16" rx="2" />
-                      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                    </svg>
+                    <EnvelopeIcon />
                   </span>
                   <h6>Email us</h6>
                   <p className="mb-2">For anything general — questions, feedback, suggestions.</p>
@@ -526,11 +624,7 @@ export default function Home() {
               <Reveal delay={140}>
                 <div className="fn-contact-card">
                   <span className="fn-contact-icon fn-contact-icon-report">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="22" height="22">
-                      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                      <line x1="12" y1="9" x2="12" y2="13" />
-                      <line x1="12" y1="17" x2="12.01" y2="17" />
-                    </svg>
+                    <FlagIcon />
                   </span>
                   <h6>Report a problem</h6>
                   <p className="mb-2">Wrong photos, fake rent, or a listing that doesn't exist.</p>
@@ -542,9 +636,7 @@ export default function Home() {
               <Reveal delay={220}>
                 <div className="fn-contact-card">
                   <span className="fn-contact-icon fn-contact-icon-wa">
-                    <svg viewBox="0 0 32 32" fill="currentColor" width="22" height="22">
-                      <path d="M16.004 3C9.383 3 4 8.383 4 15.004c0 2.117.554 4.188 1.607 6.012L4 29l8.118-1.585A11.94 11.94 0 0 0 16.004 29C22.625 29 28 23.617 28 16.996 28 10.383 22.625 3 16.004 3zm0 23.488c-1.887 0-3.738-.508-5.358-1.465l-.383-.229-4.816.942.943-4.698-.25-.391a9.93 9.93 0 0 1-1.521-5.277c0-5.496 4.473-9.969 9.973-9.969 5.492 0 9.969 4.473 9.969 9.969 0 5.496-4.477 9.969-9.973 9.969zm5.465-7.453c-.3-.148-1.765-.867-2.039-.965-.273-.102-.469-.148-.668.148-.198.297-.766.965-.94 1.164-.172.199-.344.223-.644.074-.3-.148-1.261-.465-2.398-1.48-.883-.785-1.477-1.758-1.653-2.055-.172-.297-.02-.46.132-.605.134-.133.3-.344.445-.516.148-.172.199-.297.301-.496.098-.199.05-.371-.025-.516-.074-.148-.668-1.61-.918-2.203-.242-.578-.485-.5-.668-.508l-.57-.009c-.199 0-.52.074-.793.371-.273.297-1.043 1.02-1.043 2.488s1.066 2.883 1.215 3.082c.148.199 2.098 3.203 5.082 4.492.711.305 1.262.488 1.695.621.711.223 1.355.191 1.867.117.57-.082 1.765-.719 2.012-1.414.25-.695.25-1.293.176-1.418-.074-.129-.273-.203-.57-.348z"/>
-                    </svg>
+                    <ChatIcon />
                   </span>
                   <h6>WhatsApp</h6>
                   <p className="mb-2">Fastest reply for urgent issues — 9am to 9pm.</p>

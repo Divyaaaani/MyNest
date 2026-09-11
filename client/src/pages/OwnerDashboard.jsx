@@ -15,8 +15,8 @@ const MONTHS = [
 ];
 
 export default function OwnerDashboard() {
-  const token = localStorage.getItem("fairnest_token");
-  const me = JSON.parse(localStorage.getItem("fairnest_user") || "{}");
+  const token = localStorage.getItem("mynest_token");
+  const me = JSON.parse(localStorage.getItem("mynest_user") || "{}");
 
   const [pgs, setPgs] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -125,7 +125,14 @@ export default function OwnerDashboard() {
     }
   }
 
-  if (loading) return <div className="container py-4">Loading...</div>;
+  if (loading)
+    return (
+      <div className="container py-4">
+        <div className="fn-skeleton mb-3" style={{ height: 34, width: "36%" }} />
+        <div className="fn-skeleton mb-3" style={{ height: 120 }} />
+        <div className="fn-skeleton fn-skel-line" style={{ width: "65%" }} />
+      </div>
+    );
 
   const now = new Date();
   const monthName = MONTHS[now.getMonth()];
@@ -144,7 +151,7 @@ export default function OwnerDashboard() {
         <p className="text-muted mb-4">Manage your PGs, tenants, rent and bills.</p>
       </Reveal>
 
-      {error && <p className="text-danger">{error}</p>}
+      {error && <div className="fn-alert fn-alert-error" role="alert">{error}</div>}
 
       {pgs.length === 0 ? (
         <div className="card p-4 text-center">
@@ -183,7 +190,7 @@ export default function OwnerDashboard() {
                 <div className="col-sm-3">
                   <Reveal delay={60}>
                     <div className="card fn-stat-card text-center p-3">
-                      <div className="fn-stat-num">Rs {rentExpected}</div>
+                      <div className="fn-stat-num">Rs {Number(rentExpected).toLocaleString("en-IN")}</div>
                       <div className="text-muted small">{monthName} rent expected</div>
                     </div>
                   </Reveal>
@@ -191,7 +198,7 @@ export default function OwnerDashboard() {
                 <div className="col-sm-3">
                   <Reveal delay={120}>
                     <div className="card fn-stat-card text-center p-3 border-success">
-                      <div className="fn-stat-num text-success">Rs {rentCollected}</div>
+                      <div className="fn-stat-num text-success">Rs {Number(rentCollected).toLocaleString("en-IN")}</div>
                       <div className="text-muted small">Rent collected</div>
                     </div>
                   </Reveal>
@@ -199,7 +206,7 @@ export default function OwnerDashboard() {
                 <div className="col-sm-3">
                   <Reveal delay={180}>
                     <div className="card fn-stat-card text-center p-3 border-danger">
-                      <div className="fn-stat-num text-danger">Rs {outstanding}</div>
+                      <div className="fn-stat-num text-danger">Rs {Number(outstanding).toLocaleString("en-IN")}</div>
                       <div className="text-muted small">Outstanding</div>
                     </div>
                   </Reveal>

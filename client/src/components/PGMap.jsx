@@ -56,7 +56,7 @@ export default function PGMap({ center, pgs }) {
     withCoords.forEach((pg, i) => {
       const icon = L.divIcon({
         className: "pg-marker",
-        html: `<div class="pg-marker-inner">${i + 1}</div>`,
+        html: `<div class="pg-marker-inner"><span>${i + 1}</span></div>`,
       });
       const m = L.marker([Number(pg.latitude), Number(pg.longitude)], { icon })
         .addTo(map)

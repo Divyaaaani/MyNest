@@ -1,15 +1,38 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getNotifications } from "../api";
+import { FaRegSun, FaRegMoon } from "react-icons/fa6";
 import Logo from "./Logo";
 
 export default function NavBar() {
   const { pathname } = useLocation();
-  const [user, setUser] = useState(() => localStorage.getItem("fairnest_user"));
+  const [user, setUser] = useState(() => localStorage.getItem("mynest_user"));
   const [unread, setUnread] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  // Color theme: saved choice wins, otherwise follow the OS preference.
+  const [theme, setTheme] = useState(() => {
+    const stored = localStorage.getItem("mynest_theme");
+    if (stored === "dark" || stored === "light") return stored;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
 
   useEffect(() => {
-    const stored = localStorage.getItem("fairnest_user");
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("mynest_theme", theme);
+  }, [theme]);
+
+  // Soft shadow once the page scrolls — gives the sticky header depth.
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false); // navigating always closes the mobile menu
+    const stored = localStorage.getItem("mynest_user");
     setUser(stored);
     if (!stored) {
       setUnread(0);
@@ -40,10 +63,38 @@ export default function NavBar() {
   const isOwner = me.role === "owner";
 
   return (
-    <header className="fn-header">
+    <header className={`fn-header${scrolled ? " fn-header-scrolled" : ""}`}>
       <div className="container d-flex align-items-center justify-content-between py-3">
-        <Logo />
-        <nav className="d-flex align-items-center gap-3">
+        <div className="d-flex align-items-center gap-2">
+          <button
+            type="button"
+            className="fn-theme-toggle"
+            role="switch"
+            aria-checked={theme === "dark"}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+          >
+            <span className="fn-theme-track-ico" aria-hidden="true"><FaRegSun /></span>
+            <span className="fn-theme-track-ico" aria-hidden="true"><FaRegMoon /></span>
+            <span className="fn-theme-knob" aria-hidden="true">
+              {theme === "dark" ? <FaRegMoon /> : <FaRegSun />}
+            </span>
+          </button>
+          <Logo />
+        </div>
+        <button
+          type="button"
+          className={`fn-menu-btn${menuOpen ? " open" : ""}`}
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((o) => !o)}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+        <nav className={`fn-nav d-flex align-items-center gap-3${menuOpen ? " open" : ""}`}>
           <Link to="/" className={`fn-nav-link ${pathname === "/" ? "active" : ""}`}>
             Find PG
           </Link>
