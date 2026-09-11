@@ -46,6 +46,11 @@ app.get("/api/health", async (req, res) => {
   res.json({ ok: rows[0].ok });
 });
 
+// Root: friendly landing so the bare domain never shows "Cannot GET /".
+app.get("/", (req, res) => {
+  res.json({ name: "myNest API", status: "live", health: "/api/health" });
+});
+
 // Photos fetched by scripts/fetch-real-pgs.js are stored locally so the
 // app never depends on the Google key at runtime.
 app.use("/api/photo", express.static(path.join(__dirname, "public", "photos")));
