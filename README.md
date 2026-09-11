@@ -4,6 +4,17 @@ A full-stack web app for students to **find PG accommodation near their college*
 
 Live concept: search by college → compare PGs on a map → join a PG group → pay rent online together.
 
+## 🧭 Why myNest is different
+
+Listing sites (MagicBricks, 99acres…) stop at showing you rooms. myNest stays with you **after** you move in:
+
+- 🔔 **Rent reminders that chase you, not the other way round** — "rent due in 5 days / due today" notifications computed from your actual dues, plus alerts for requests, approvals, and payments received.
+- 🤝 **Roommate finding built in** — post "I need a roommate" at your exact PG and take applications, or browse the community board and comment to reach people directly.
+- 🧾 **Shared rent & bill tracking** — monthly cycles per group, per-member dues, who-paid vs who-owes, and a live collection progress bar. No more spreadsheet or "bhai, rent bhej de" texts.
+- 💸 **Rent a PG fully online** — apply to a listing, get accepted by the owner, become a tenant, and pay through the in-app UPI-style flow.
+- 🏠 **Owners get a real dashboard** — tenants, pending requests, rent/bill collection, due-day settings — instead of managing everything on WhatsApp.
+- 🎓 **College-first search** — everything revolves around your college with walking-distance radius search on a live map, not generic city filters.
+
 ## ✨ Features
 
 - **PG search** — by college, radius, budget, and gender, with distance-sorted results + Leaflet map
