@@ -19,6 +19,7 @@ const communityRouter = require("./routes/community");
 const ownerRouter = require("./routes/owner");
 const notificationsRouter = require("./routes/notifications");
 const propertiesRouter = require("./routes/properties");
+const messagesRouter = require("./routes/messages");
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.use("/api", communityRouter);
 app.use("/api/owner", ownerRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/properties", propertiesRouter);
+app.use("/api/chats", messagesRouter);
 
 // Unknown API route -> JSON 404 (instead of Express's HTML page).
 app.use("/api", (req, res) => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { getNotifications } from "../api";
+import { getNotifications, getChatsUnread } from "../api";
 import { FaRegSun, FaRegMoon } from "react-icons/fa6";
 import Logo from "./Logo";
 
@@ -8,6 +8,7 @@ export default function NavBar() {
   const { pathname } = useLocation();
   const [user, setUser] = useState(() => localStorage.getItem("mynest_user"));
   const [unread, setUnread] = useState(0);
+  const [msgUnread, setMsgUnread] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   // Color theme: saved choice wins, otherwise follow the OS preference.
@@ -36,6 +37,7 @@ export default function NavBar() {
     setUser(stored);
     if (!stored) {
       setUnread(0);
+      setMsgUnread(0);
       return;
     }
     let cancelled = false;
@@ -47,9 +49,19 @@ export default function NavBar() {
         .catch(() => {});
     load();
     const id = setInterval(load, 5000);
+    // Chat badge rides alongside (cheap count query, same rhythm).
+    const loadMsgs = () =>
+      getChatsUnread()
+        .then((res) => {
+          if (!cancelled) setMsgUnread(res.unread);
+        })
+        .catch(() => {});
+    loadMsgs();
+    const id2 = setInterval(loadMsgs, 5000);
     return () => {
       cancelled = true;
       clearInterval(id);
+      clearInterval(id2);
     };
   }, [pathname]);
 
@@ -132,6 +144,18 @@ export default function NavBar() {
           {user && unread > 0 && (
             <span className="fn-notif-badge" title="Notifications">
               {unread}
+            </span>
+          )}
+
+          <Link
+            to="/chats"
+            className={`fn-nav-link ${pathname === "/chats" ? "active" : ""}`}
+          >
+            Chats
+          </Link>
+          {user && msgUnread > 0 && (
+            <span className="fn-notif-badge" title="Unread chats">
+              {msgUnread}
             </span>
           )}
 

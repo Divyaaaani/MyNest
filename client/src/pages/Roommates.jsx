@@ -1,11 +1,12 @@
-import { useEffect, useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   getCommunityPosts,
   getPostComments,
   createCommunityPost,
   addPostComment,
   pingPostAuthor,
+  openChat,
 } from "../api";
 import Reveal from "../components/Reveal";
 
@@ -41,10 +42,10 @@ export default function Roommates() {
   const [openComments, setOpenComments] = useState(null); // post id with open comments
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
-  const [profile, setProfile] = useState(null); // { name, role, postId }
-  const commentBoxRef = useRef(null);
+  const [profile, setProfile] = useState(null); // { name, role, postId, userId }
 
   const isLoggedIn = !!localStorage.getItem("mynest_token");
+  const navigate = useNavigate();
 
   async function loadPosts() {
     setLoading(true);
@@ -112,31 +113,27 @@ export default function Roommates() {
     }
   }
 
-  // Chat button in someone's profile card: notify them (dashboard
-  // notification), then jump into their post's comment thread with the
-  // box focused so you can talk right away. Ping is best-effort.
-  async function handleChat() {
-    const postId = profile.postId;
+  // Chat button: ping them, then open a personal 1-on-1 thread.
+  async function handleChatDm() {
+    const { postId, userId } = profile;
     setProfile(null);
-    if (isLoggedIn) {
+    if (isLoggedIn && postId) {
       try {
         await pingPostAuthor(postId);
       } catch {
         /* notify failed — chatting still works */
       }
     }
-    try {
-      if (openComments !== postId) {
-        await toggleComments(postId);
-      }
-    } catch (err) {
-      setError(err.message);
+    if (!isLoggedIn) {
+      navigate("/auth");
       return;
     }
-    setTimeout(() => {
-      commentBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      commentBoxRef.current?.focus({ preventScroll: true });
-    }, 120);
+    try {
+      await openChat(userId, postId);
+    } catch {
+      /* thread open failed — Chats page still lists everything */
+    }
+    navigate(`/chats?with=${userId}`);
   }
 
   return (
@@ -242,10 +239,10 @@ export default function Roommates() {
               </div>
             </div>
             <p className="text-muted small">
-              Chat with {profile.name.split(" ")[0]} on their post — they'll be
-              notified that you reached out.
+              Personal chat with {profile.name.split(" ")[0]} — only you two
+              can see it. They'll be notified that you reached out.
             </p>
-            <button type="button" className="btn btn-primary w-100" onClick={handleChat}>
+            <button type="button" className="btn btn-primary w-100" onClick={handleChatDm}>
               Chat
             </button>
             <button
@@ -278,7 +275,7 @@ export default function Roommates() {
                       title={`View ${p.author_name}'s profile`}
                       aria-label={`View ${p.author_name}'s profile`}
                       onClick={() =>
-                        setProfile({ name: p.author_name, role: p.author_role, postId: p.id })
+                        setProfile({ name: p.author_name, role: p.author_role, postId: p.id, userId: p.author_id })
                       }
                     >
                       <span className="fn-avatar" aria-hidden="true">{initials(p.author_name)}</span>
@@ -325,7 +322,7 @@ export default function Roommates() {
                                   title={`View ${c.author_name}'s profile`}
                                   aria-label={`View ${c.author_name}'s profile`}
                                   onClick={() =>
-                                    setProfile({ name: c.author_name, role: c.author_role, postId: p.id })
+                                    setProfile({ name: c.author_name, role: c.author_role, postId: p.id, userId: c.author_id })
                                   }
                                 >
                                   <span className="fn-comment-avatar" aria-hidden="true">{initials(c.author_name)}</span>
@@ -345,7 +342,6 @@ export default function Roommates() {
                             <form onSubmit={(e) => handleComment(e, p.id)} className="d-flex gap-2 mt-3">
                               <input
                                 className="form-control"
-                                ref={commentBoxRef}
                                 value={commentText}
                                 onChange={(e) => setCommentText(e.target.value)}
                                 placeholder="Comment to reach the poster..."

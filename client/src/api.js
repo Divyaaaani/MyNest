@@ -69,6 +69,26 @@ export async function login(email, password) {
   return res.json();
 }
 
+export async function forgotPassword(email) {
+  const res = await fetch(`${API}/auth/forgot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || "Failed to send code");
+  return res.json();
+}
+
+export async function resetPassword(email, otp, password) {
+  const res = await fetch(`${API}/auth/reset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp, password }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || "Reset failed");
+  return res.json();
+}
+
 // ---- Protected calls: attach the saved JWT as a Bearer token ----
 
 function authHeaders() {
@@ -154,6 +174,51 @@ export async function pingPostAuthor(postId) {
   });
   if (res.status === 401) throw new Error("Please log in first");
   if (!res.ok) throw new Error("Failed to notify");
+  return res.json();
+}
+
+// ---- Personal chats (DMs) ----
+
+export async function getChats() {
+  const res = await fetch(`${API}/chats`, { headers: authHeaders() });
+  if (res.status === 401) throw new Error("Session expired — please log in again");
+  if (!res.ok) throw new Error("Failed to load chats");
+  return res.json();
+}
+
+export async function getChatsUnread() {
+  const res = await fetch(`${API}/chats/unread`, { headers: authHeaders() });
+  if (res.status === 401) throw new Error("Session expired — please log in again");
+  if (!res.ok) throw new Error("Failed to load unread count");
+  return res.json();
+}
+
+export async function openChat(userId, postId) {
+  const res = await fetch(`${API}/chats/open`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ userId, postId }),
+  });
+  if (res.status === 401) throw new Error("Please log in first");
+  if (!res.ok) throw new Error((await res.json()).error || "Failed to open chat");
+  return res.json();
+}
+
+export async function getChatMessages(id) {
+  const res = await fetch(`${API}/chats/${id}/messages`, { headers: authHeaders() });
+  if (res.status === 401) throw new Error("Session expired — please log in again");
+  if (!res.ok) throw new Error("Failed to load messages");
+  return res.json();
+}
+
+export async function sendChatMessage(id, body) {
+  const res = await fetch(`${API}/chats/${id}/messages`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({ body }),
+  });
+  if (res.status === 401) throw new Error("Please log in first");
+  if (!res.ok) throw new Error((await res.json()).error || "Failed to send");
   return res.json();
 }
 

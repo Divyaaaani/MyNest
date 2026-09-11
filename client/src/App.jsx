@@ -7,6 +7,7 @@ import OwnerDashboard from "./pages/OwnerDashboard";
 import AddProperty from "./pages/AddProperty";
 import PGDetail from "./pages/PGDetail";
 import Roommates from "./pages/Roommates";
+import Chats from "./pages/Chats";
 import Logo from "./components/Logo";
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/owner/add" element={<AddProperty />} />
           <Route path="/pg/:id" element={<PGDetail />} />
           <Route path="/roommates" element={<Roommates />} />
+          <Route path="/chats" element={<Chats />} />
         </Routes>
       </main>
       <footer className="fn-footer py-5">

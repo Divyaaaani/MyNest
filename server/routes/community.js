@@ -7,7 +7,7 @@ const router = express.Router();
 // GET /api/community/posts -> all personals, newest first, with comment count
 router.get("/community/posts", async (req, res) => {
   const [rows] = await db.query(
-    `SELECT p.id, p.title, p.message, p.city, p.budget_max, p.created_at,
+    `SELECT p.id, p.title, p.message, p.city, p.budget_max, p.created_at, p.user_id AS author_id,
             u.name AS author_name, u.role AS author_role,
             (SELECT COUNT(*) FROM roommate_post_comments c WHERE c.post_id = p.id) AS comment_count
      FROM roommate_posts p
@@ -20,7 +20,7 @@ router.get("/community/posts", async (req, res) => {
 // GET /api/community/posts/:id/comments -> all comments on one post, oldest first
 router.get("/community/posts/:id/comments", async (req, res) => {
   const [rows] = await db.query(
-    `SELECT c.id, c.message, c.created_at, u.name AS author_name, u.role AS author_role
+    `SELECT c.id, c.message, c.created_at, c.user_id AS author_id, u.name AS author_name, u.role AS author_role
      FROM roommate_post_comments c
      JOIN users u ON u.id = c.user_id
      WHERE c.post_id = ?

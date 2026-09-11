@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const { z } = require("zod");
 const db = require("../db");
 const { validate } = require("../middleware/validate");
+const { sendOtp } = require("../mailer");
 
 const router = express.Router();
 
@@ -97,6 +98,76 @@ router.post("/login", validate(loginSchema), async (req, res) => {
         role: user.role,
       },
     });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// ---- Forgot password (email OTP) ----
+
+const forgotSchema = z.object({
+  email: z.string().trim().toLowerCase().email("valid email required").max(255),
+});
+
+const resetSchema = z.object({
+  email: z.string().trim().toLowerCase().email("valid email required").max(255),
+  otp: z.string().trim().regex(/^\d{6}$/, "6-digit code required"),
+  password: z.string().min(8, "password must be at least 8 characters").max(128),
+});
+
+// POST /api/auth/forgot  body: { email }
+// Sends a 6-digit code (15-min expiry). Always answers ok — never reveals
+// whether the email exists. Without SMTP configured, the code is logged
+// server-side so flows stay testable (see mailer.js).
+router.post("/forgot", validate(forgotSchema), async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const [rows] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
+    if (rows.length > 0) {
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const otpHash = await bcrypt.hash(otp, 10);
+      await db.query("UPDATE password_resets SET used = true WHERE user_id = ? AND used = false", [
+        rows[0].id,
+      ]);
+      await db.query(
+        "INSERT INTO password_resets (user_id, otp_hash, expires_at) VALUES (?, ?, NOW() + INTERVAL '15 minutes')",
+        [rows[0].id, otpHash]
+      );
+      await sendOtp(email, otp);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// POST /api/auth/reset  body: { email, otp, password }
+router.post("/reset", validate(resetSchema), async (req, res) => {
+  const { email, otp, password } = req.body;
+
+  try {
+    const [users] = await db.query("SELECT id FROM users WHERE email = ?", [email]);
+    if (users.length === 0) return res.status(400).json({ error: "Invalid or expired code" });
+
+    const [resets] = await db.query(
+      `SELECT id, otp_hash FROM password_resets
+       WHERE user_id = ? AND used = false AND expires_at > NOW()
+       ORDER BY id DESC LIMIT 1`,
+      [users[0].id]
+    );
+    if (resets.length === 0) return res.status(400).json({ error: "Invalid or expired code" });
+
+    const match = await bcrypt.compare(otp, resets[0].otp_hash);
+    if (!match) return res.status(400).json({ error: "Invalid or expired code" });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await db.query("UPDATE users SET password_hash = ? WHERE id = ?", [passwordHash, users[0].id]);
+    await db.query("UPDATE password_resets SET used = true WHERE id = ?", [resets[0].id]);
+
+    res.json({ ok: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });

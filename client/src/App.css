@@ -2198,6 +2198,70 @@ a { color: #00835a; }
 }
 .fn-avatar-btn:hover { transform: scale(1.08); }
 
+/* ---------------- Personal chats ---------------- */
+.fn-chat-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 14px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  color: inherit;
+}
+.fn-chat-item:hover { background: var(--fn-accent-light); }
+.fn-chat-item.active { background: var(--fn-accent-light); outline: 2px solid var(--fn-accent); }
+
+.fn-chat-unread {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--fn-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fn-chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 6px 2px;
+}
+
+.fn-bubble {
+  max-width: 75%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.fn-bubble.them {
+  align-self: flex-start;
+  background: var(--fn-bg);
+  border: 1px solid var(--fn-border);
+  color: var(--fn-ink);
+}
+.fn-bubble.me {
+  align-self: flex-end;
+  background: var(--fn-accent);
+  color: #fff;
+}
+.fn-bubble small { display: block; font-size: 11px; opacity: 0.7; margin-top: 4px; }
+[data-theme="dark"] .fn-bubble.me { background: #23795c; }
+
 .fn-account-row {
   display: flex;
   justify-content: space-between;

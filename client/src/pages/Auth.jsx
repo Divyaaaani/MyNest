@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { login, register } from "../api";
+import { login, register, forgotPassword, resetPassword } from "../api";
 import Logo from "../components/Logo";
 
 export default function Auth() {
@@ -13,6 +13,8 @@ export default function Auth() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState("form"); // form | forgot | reset
+  const [otp, setOtp] = useState("");
   const navigate = useNavigate();
   // Who's logged in right now (null = logged out -> show the form).
   const [currentUser, setCurrentUser] = useState(() => {
@@ -60,20 +62,67 @@ export default function Auth() {
       .toUpperCase();
   }
 
+  async function handleForgot(e) {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    setBusy(true);
+    try {
+      await forgotPassword(email);
+      setView("reset");
+      setMessage("Code sent — check your email (valid 15 minutes).");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleReset(e) {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+    setBusy(true);
+    try {
+      await resetPassword(email, otp, password);
+      setView("form");
+      setTab("login");
+      setOtp("");
+      setPassword("");
+      setMessage("Password updated — log in with your new password.");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="container my-5">
       <div className="fn-auth-logo">
         <Logo />
       </div>
       <h1 className="fn-title text-center mb-1">
-        {currentUser ? "Your account" : tab === "login" ? "Welcome back" : "Join myNest"}
+        {currentUser
+          ? "Your account"
+          : view === "forgot"
+            ? "Reset password"
+            : view === "reset"
+              ? "Enter your code"
+              : tab === "login"
+                ? "Welcome back"
+                : "Join myNest"}
       </h1>
       <p className="fn-section-sub text-center mb-4">
         {currentUser
           ? `You're logged in as ${currentUser.name}.`
-          : tab === "login"
-            ? "Log in to track rent, groups and roommates."
-            : "One account for PGs, roommates and rent tracking."}
+          : view === "forgot"
+            ? "We'll email you a 6-digit code."
+            : view === "reset"
+              ? `Code sent to ${email || "your email"} — valid 15 minutes.`
+              : tab === "login"
+                ? "Log in to track rent, groups and roommates."
+                : "One account for PGs, roommates and rent tracking."}
       </p>
 
       {currentUser ? (
@@ -108,6 +157,75 @@ export default function Auth() {
               Log out
             </button>
           </div>
+        </div>
+      ) : view !== "form" ? (
+        <div className="card p-4 fn-auth-card">
+          {view === "forgot" ? (
+            <>
+              <h2 className="fn-section-title mb-1">Forgot password?</h2>
+              <p className="fn-section-sub mb-3">Enter your account email.</p>
+              <form onSubmit={handleForgot}>
+                <div className="mb-3">
+                  <label className="fn-label" htmlFor="auth-fg-email">Email</label>
+                  <input
+                    id="auth-fg-email"
+                    className="form-control"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@college.edu"
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary w-100 fn-btn-shine" disabled={busy}>
+                  {busy ? "Sending…" : "Send code"}
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              <h2 className="fn-section-title mb-1">Check your email</h2>
+              <p className="fn-section-sub mb-3">Enter the 6-digit code + a new password.</p>
+              <form onSubmit={handleReset}>
+                <div className="mb-3">
+                  <label className="fn-label" htmlFor="auth-otp">6-digit code</label>
+                  <input
+                    id="auth-otp"
+                    className="form-control"
+                    required
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="123456"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="fn-label" htmlFor="auth-new-password">New password</label>
+                  <input
+                    id="auth-new-password"
+                    className="form-control"
+                    type="password"
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                  />
+                </div>
+                <button type="submit" className="btn btn-primary w-100 fn-btn-shine" disabled={busy}>
+                  {busy ? "Updating…" : "Set new password"}
+                </button>
+              </form>
+            </>
+          )}
+          <button
+            type="button"
+            className="btn btn-link w-100 mt-2"
+            onClick={() => { setView("form"); setError(""); setMessage(""); }}
+          >
+            Back to login
+          </button>
         </div>
       ) : (
       <div className="card p-4 fn-auth-card">
@@ -212,6 +330,15 @@ export default function Auth() {
               ? tab === "login" ? "Logging in…" : "Creating account…"
               : tab === "login" ? "Log in" : `Create ${role === "owner" ? "owner" : "student"} account`}
           </button>
+          {tab === "login" && (
+            <button
+              type="button"
+              className="btn btn-link w-100 mt-2 p-0"
+              onClick={() => { setView("forgot"); setError(""); setMessage(""); }}
+            >
+              Forgot password?
+            </button>
+          )}
         </form>
       </div>
       )}
