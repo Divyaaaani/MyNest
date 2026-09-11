@@ -8,7 +8,7 @@ const router = express.Router();
 router.get("/community/posts", async (req, res) => {
   const [rows] = await db.query(
     `SELECT p.id, p.title, p.message, p.city, p.budget_max, p.created_at,
-            u.name AS author_name,
+            u.name AS author_name, u.role AS author_role,
             (SELECT COUNT(*) FROM roommate_post_comments c WHERE c.post_id = p.id) AS comment_count
      FROM roommate_posts p
      JOIN users u ON u.id = p.user_id
@@ -20,7 +20,7 @@ router.get("/community/posts", async (req, res) => {
 // GET /api/community/posts/:id/comments -> all comments on one post, oldest first
 router.get("/community/posts/:id/comments", async (req, res) => {
   const [rows] = await db.query(
-    `SELECT c.id, c.message, c.created_at, u.name AS author_name
+    `SELECT c.id, c.message, c.created_at, u.name AS author_name, u.role AS author_role
      FROM roommate_post_comments c
      JOIN users u ON u.id = c.user_id
      WHERE c.post_id = ?
@@ -63,6 +63,37 @@ router.post("/community/posts/:id/comments", requireAuth, async (req, res) => {
   );
 
   res.status(201).json({ id: result.insertId });
+});
+
+// POST /api/community/posts/:id/contact
+// "I want to reach this poster" — drops a notification into the author's
+// dashboard (the frontend opens Call/WhatsApp right after this call).
+router.post("/community/posts/:id/contact", requireAuth, async (req, res) => {
+  const postId = req.params.id;
+
+  const [rows] = await db.query("SELECT user_id FROM roommate_posts WHERE id = ?", [postId]);
+  if (rows.length === 0) return res.status(404).json({ error: "Post not found" });
+  const authorId = rows[0].user_id;
+  if (authorId === req.userId) return res.json({ ok: true, self: true }); // no self-pings
+
+  const [me] = await db.query("SELECT name FROM users WHERE id = ?", [req.userId]);
+  const title = "Someone wants to reach you";
+  const message = `${me.length ? me[0].name : "Someone"} tapped contact on your roommate post.`;
+
+  // One ping per person per post per day — no badge spam from repeat taps.
+  const [dup] = await db.query(
+    `SELECT id FROM notifications WHERE user_id = ? AND title = ? AND message = ?
+     AND created_at > NOW() - INTERVAL '24 hours'`,
+    [authorId, title, message]
+  );
+  if (dup.length === 0) {
+    await db.query(
+      "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'info')",
+      [authorId, title, message]
+    );
+  }
+
+  res.json({ ok: true });
 });
 
 module.exports = router;

@@ -145,6 +145,18 @@ export async function addPostComment(postId, message) {
   return res.json();
 }
 
+// Ping a post's author ("I want to contact you") — lands in their dashboard
+// notifications. Best-effort: callers should still open the channel on failure.
+export async function pingPostAuthor(postId) {
+  const res = await fetch(`${API}/community/posts/${postId}/contact`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (res.status === 401) throw new Error("Please log in first");
+  if (!res.ok) throw new Error("Failed to notify");
+  return res.json();
+}
+
 // ---- Join Group (student requests, owner approves) ----
 
 export async function requestJoinGroup(groupId, message) {

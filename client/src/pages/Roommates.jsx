@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   getCommunityPosts,
   getPostComments,
   createCommunityPost,
   addPostComment,
+  pingPostAuthor,
 } from "../api";
 import Reveal from "../components/Reveal";
 
@@ -40,6 +41,8 @@ export default function Roommates() {
   const [openComments, setOpenComments] = useState(null); // post id with open comments
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
+  const [profile, setProfile] = useState(null); // { name, role, postId }
+  const commentBoxRef = useRef(null);
 
   const isLoggedIn = !!localStorage.getItem("mynest_token");
 
@@ -107,6 +110,33 @@ export default function Roommates() {
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  // Chat button in someone's profile card: notify them (dashboard
+  // notification), then jump into their post's comment thread with the
+  // box focused so you can talk right away. Ping is best-effort.
+  async function handleChat() {
+    const postId = profile.postId;
+    setProfile(null);
+    if (isLoggedIn) {
+      try {
+        await pingPostAuthor(postId);
+      } catch {
+        /* notify failed — chatting still works */
+      }
+    }
+    try {
+      if (openComments !== postId) {
+        await toggleComments(postId);
+      }
+    } catch (err) {
+      setError(err.message);
+      return;
+    }
+    setTimeout(() => {
+      commentBoxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      commentBoxRef.current?.focus({ preventScroll: true });
+    }, 120);
   }
 
   return (
@@ -190,6 +220,45 @@ export default function Roommates() {
       {notice && <p className="text-success text-center">{notice}</p>}
       {error && <p className="text-danger text-center">{error}</p>}
 
+      {/* Profile contact card — opens from any avatar */}
+      {profile && (
+        <div className="fn-modal-backdrop" onClick={() => setProfile(null)}>
+          <div
+            className="fn-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${profile.name}'s profile`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center">
+              <div className="fn-avatar fn-avatar-lg mx-auto mb-2" aria-hidden="true">
+                {initials(profile.name)}
+              </div>
+              <h5 className="fw-bold mb-1">{profile.name}</h5>
+              <div className="mb-3">
+                <span className="fn-result-chip">
+                  {profile.role === "owner" ? "PG Owner" : "Student"}
+                </span>
+              </div>
+            </div>
+            <p className="text-muted small">
+              Chat with {profile.name.split(" ")[0]} on their post — they'll be
+              notified that you reached out.
+            </p>
+            <button type="button" className="btn btn-primary w-100" onClick={handleChat}>
+              Chat
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline-secondary w-100 mt-3"
+              onClick={() => setProfile(null)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-5 text-muted">Loading posts...</div>
       ) : posts.length === 0 ? (
@@ -203,7 +272,17 @@ export default function Roommates() {
               <Reveal delay={i * 80} key={p.id}>
                 <div className="card p-4 mb-3 fn-community-card">
                   <div className="d-flex gap-3">
-                    <div className="fn-avatar">{initials(p.author_name)}</div>
+                    <button
+                      type="button"
+                      className="fn-avatar-btn"
+                      title={`View ${p.author_name}'s profile`}
+                      aria-label={`View ${p.author_name}'s profile`}
+                      onClick={() =>
+                        setProfile({ name: p.author_name, role: p.author_role, postId: p.id })
+                      }
+                    >
+                      <span className="fn-avatar" aria-hidden="true">{initials(p.author_name)}</span>
+                    </button>
                     <div className="flex-grow-1">
                       <div className="d-flex flex-wrap justify-content-between gap-2">
                         <div>
@@ -240,7 +319,17 @@ export default function Roommates() {
                           ) : (
                             comments.map((c) => (
                               <div key={c.id} className="fn-comment">
-                                <div className="fn-comment-avatar">{initials(c.author_name)}</div>
+                                <button
+                                  type="button"
+                                  className="fn-avatar-btn"
+                                  title={`View ${c.author_name}'s profile`}
+                                  aria-label={`View ${c.author_name}'s profile`}
+                                  onClick={() =>
+                                    setProfile({ name: c.author_name, role: c.author_role, postId: p.id })
+                                  }
+                                >
+                                  <span className="fn-comment-avatar" aria-hidden="true">{initials(c.author_name)}</span>
+                                </button>
                                 <div>
                                   <span className="fw-semibold small text-dark">
                                     {c.author_name}
@@ -256,6 +345,7 @@ export default function Roommates() {
                             <form onSubmit={(e) => handleComment(e, p.id)} className="d-flex gap-2 mt-3">
                               <input
                                 className="form-control"
+                                ref={commentBoxRef}
                                 value={commentText}
                                 onChange={(e) => setCommentText(e.target.value)}
                                 placeholder="Comment to reach the poster..."

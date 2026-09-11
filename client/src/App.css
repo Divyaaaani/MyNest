@@ -2185,6 +2185,19 @@ a { color: #00835a; }
 /* ---------------- Account profile (logged-in view) ---------------- */
 .fn-avatar-lg { width: 64px; height: 64px; font-size: 22px; }
 
+/* tappable avatars -> profile contact card */
+.fn-avatar-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  display: inline-flex;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.fn-avatar-btn:hover { transform: scale(1.08); }
+
 .fn-account-row {
   display: flex;
   justify-content: space-between;
