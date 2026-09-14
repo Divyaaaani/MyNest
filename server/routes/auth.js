@@ -5,15 +5,26 @@ const { z } = require("zod");
 const db = require("../db");
 const { validate } = require("../middleware/validate");
 const { sendOtp } = require("../mailer");
+const { getPasswordErrors } = require("../utils/password");
 
 const router = express.Router();
 
-// Strict input contracts: rejects bad emails, short passwords, junk roles
+// Helper: strong password field — 8-128 chars, uppercase, lowercase, digit, special, no spaces.
+function strongPasswordField() {
+  return z.string().superRefine((val, ctx) => {
+    const errs = getPasswordErrors(val);
+    for (const msg of errs) {
+      ctx.addIssue({ code: "custom", message: msg });
+    }
+  });
+}
+
+// Strict input contracts: rejects bad emails, weak passwords, junk roles
 // BEFORE any database work happens.
 const registerSchema = z.object({
   name: z.string().trim().min(2, "name must be at least 2 characters").max(100),
   email: z.string().trim().toLowerCase().email("valid email required").max(255),
-  password: z.string().min(8, "password must be at least 8 characters").max(128),
+  password: strongPasswordField(),
   role: z.enum(["student", "owner"]).optional().default("student"),
   phone: z.string().trim().max(20).optional().nullable(),
 });
@@ -113,7 +124,7 @@ const forgotSchema = z.object({
 const resetSchema = z.object({
   email: z.string().trim().toLowerCase().email("valid email required").max(255),
   otp: z.string().trim().regex(/^\d{6}$/, "6-digit code required"),
-  password: z.string().min(8, "password must be at least 8 characters").max(128),
+  password: strongPasswordField(),
 });
 
 // POST /api/auth/forgot  body: { email }
@@ -135,7 +146,18 @@ router.post("/forgot", validate(forgotSchema), async (req, res) => {
         "INSERT INTO password_resets (user_id, otp_hash, expires_at) VALUES (?, ?, NOW() + INTERVAL '15 minutes')",
         [rows[0].id, otpHash]
       );
-      await sendOtp(email, otp);
+      const sent = await sendOtp(email, otp);
+      // Dev helper: when SMTP not configured, return OTP so UI can show it
+      // In production with SMTP, do NOT leak the code
+      if (!sent && process.env.NODE_ENV !== "production") {
+        return res.json({ ok: true, dev_otp: otp, dev_note: "SMTP not configured — dev_otp is visible only locally" });
+      }
+    } else {
+      // No user — still log for debugging in dev
+      console.log(`[forgot] No account for ${email} — no OTP generated (still returns ok)`);
+      if (process.env.NODE_ENV !== "production") {
+        return res.json({ ok: true, dev_note: "No account with this email — sign up first" });
+      }
     }
     res.json({ ok: true });
   } catch (err) {

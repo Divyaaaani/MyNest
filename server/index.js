@@ -58,6 +58,19 @@ app.use("/api/photo", express.static(path.join(__dirname, "public", "photos")));
 // Owner-uploaded property photos (Add Property flow) live under public/uploads.
 app.use("/api/photo/uploads", express.static(path.join(__dirname, "public", "uploads")));
 
+// Dev helper: fetch last OTP without digging in logs (only when SMTP not configured)
+app.get("/api/dev/last-otp", (req, res) => {
+  if (process.env.NODE_ENV === "production" || process.env.SMTP_HOST) {
+    return res.status(404).json({ error: "Not available" });
+  }
+  try {
+    const data = require("fs").readFileSync(require("path").join(__dirname, "last-otp.json"), "utf8");
+    res.json(JSON.parse(data));
+  } catch {
+    res.status(404).json({ error: "No OTP generated yet — request a code first" });
+  }
+});
+
 app.use("/api/pgs", pgsRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/groups", groupsRouter);

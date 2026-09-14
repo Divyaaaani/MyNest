@@ -20,8 +20,16 @@ function getTransporter() {
 
 async function sendOtp(email, otp) {
   const tx = getTransporter();
+  // Always log to console (dev) and to a file so OTP is never lost
+  const line = `[mailer] OTP for ${email}: ${otp} (valid 15 min) — ${new Date().toISOString()}`;
+  console.log(line);
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    fs.appendFileSync(path.join(__dirname, "otp.log"), line + "\n");
+    fs.writeFileSync(path.join(__dirname, "last-otp.json"), JSON.stringify({ email, otp, created_at: new Date().toISOString() }, null, 2));
+  } catch {}
   if (!tx) {
-    console.log(`[mailer] SMTP not configured — OTP for ${email}: ${otp}`);
     return false;
   }
   await tx.sendMail({
