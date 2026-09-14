@@ -8,12 +8,16 @@ const nodemailer = require("nodemailer");
 let transporter = null;
 function getTransporter() {
   if (transporter) return transporter;
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER) return null;
+  // Accept SMPT_HOST typo from Render dashboard for forgiveness
+  const smtpHost = process.env.SMTP_HOST || process.env.SMPT_HOST;
+  const smtpUser = process.env.SMTP_USER || process.env.SMPT_USER;
+  if (!smtpHost || !smtpUser) return null;
+  if (process.env.SMPT_HOST && !process.env.SMTP_HOST) console.warn("[mailer] Using SMPT_HOST (typo) — please rename to SMTP_HOST in Render");
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: Number(process.env.SMTP_PORT) === 465,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    host: smtpHost,
+    port: Number(process.env.SMTP_PORT || process.env.SMPT_PORT || 587),
+    secure: Number(process.env.SMTP_PORT || process.env.SMPT_PORT) === 465,
+    auth: { user: smtpUser, pass: process.env.SMTP_PASS || process.env.SMPT_PASS },
   });
   return transporter;
 }

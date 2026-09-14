@@ -1,8 +1,9 @@
 // Central file for ALL backend calls. Every page imports functions from here.
 // Local dev: "/api" works because of the Vite proxy (client -> server).
 // Production (Vercel frontend + Render backend): set VITE_API_URL to the
-// backend origin INCLUDING /api, e.g. https://mynest-api.onrender.com/api
-const API = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
+// backend origin INCLUDING /api, e.g. https://mynest-c9xn.onrender.com/api
+// Fallback to live Render URL if VITE_API_URL not set on Vercel (fixes 404 on /auth live).
+const API = (import.meta.env.VITE_API_URL || (typeof window !== "undefined" && window.location.hostname.endsWith("vercel.app") ? "https://mynest-c9xn.onrender.com/api" : "/api")).replace(/\/$/, "");
 
 export async function searchPGs(lat, lng, radius, minRent, maxRent, college, gender) {
   const params = new URLSearchParams({ lat, lng, radius });

@@ -215,6 +215,8 @@ export default function Auth() {
     setError("");
     setMessage("");
     setBusy(true);
+    // Show wake-up hint if Render free instance is sleeping (50s delay)
+    const wakeTimer = setTimeout(() => setMessage("Waking up server (free instance) — this can take 30-50s on first try, please wait..."), 2500);
     try {
       const res = await forgotPassword(email);
       // dev_otp visible only locally when SMTP not configured
@@ -238,8 +240,15 @@ export default function Auth() {
       setPasswordTouched(false);
       setConfirmTouched(false);
     } catch (err) {
-      setError(err.message);
+      clearTimeout(wakeTimer);
+      // Render free instance often returns 502/timeout on wake — retry once
+      if (err.message && err.message.includes("Failed to fetch")) {
+        setError("Server waking up (free tier) — please tap Send code again in 10s");
+      } else {
+        setError(err.message);
+      }
     } finally {
+      clearTimeout(wakeTimer);
       setBusy(false);
     }
   }
