@@ -146,12 +146,23 @@ router.post("/forgot", validate(forgotSchema), async (req, res) => {
         "INSERT INTO password_resets (user_id, otp_hash, expires_at) VALUES (?, ?, NOW() + INTERVAL '15 minutes')",
         [rows[0].id, otpHash]
       );
-      const sent = await sendOtp(email, otp);
-      // Dev helper: when SMTP not configured, return OTP so UI can show it
-      // In production with SMTP, do NOT leak the code
-      if (!sent && process.env.NODE_ENV !== "production") {
+      // Respond immediately — don't block UI on SMTP (Gmail can take 5-10s + Render cold start 50s)
+      // In dev, include dev_otp so localhost shows it instantly; in prod send in background
+      const isProd = process.env.NODE_ENV === "production";
+      const hasSmtp = !!(process.env.SMTP_HOST || process.env.SMPT_HOST);
+      if (!isProd && !hasSmtp) {
+        // Local dev: no SMTP — return OTP instantly
+        await sendOtp(email, otp); // still logs to console/file
         return res.json({ ok: true, dev_otp: otp, dev_note: "SMTP not configured — dev_otp is visible only locally" });
       }
+      if (!isProd && hasSmtp) {
+        // Local dev with SMTP — send in background but also return dev_otp for convenience
+        sendOtp(email, otp).catch(e => console.error("[mailer] background send failed:", e.message));
+        return res.json({ ok: true, dev_otp: otp, dev_note: "OTP sent via email and also shown locally" });
+      }
+      // Production: send in background, respond instantly so UI doesn't hang on free-tier wake
+      sendOtp(email, otp).catch(e => console.error("[mailer] send failed:", e.message));
+      // No dev_otp in production
     } else {
       // No user — still log for debugging in dev
       console.log(`[forgot] No account for ${email} — no OTP generated (still returns ok)`);
