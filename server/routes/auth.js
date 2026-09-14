@@ -161,7 +161,11 @@ router.post("/forgot", validate(forgotSchema), async (req, res) => {
     }
     res.json({ ok: true });
   } catch (err) {
-    console.error(err);
+    console.error("[forgot] ", err.message, err.code);
+    // Helpful for Neon/Render logs: missing table -> hint
+    if (err.message && err.message.includes("password_resets")) {
+      return res.status(500).json({ error: "Database not initialized — retry in 10s (auto-creating tables)" });
+    }
     res.status(500).json({ error: "Database error" });
   }
 });
